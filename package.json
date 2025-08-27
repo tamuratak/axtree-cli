@@ -8,9 +8,12 @@
     },
     "devDependencies": {
         "@eslint/js": "9.34.0",
+        "@types/mocha": "10.0.10",
         "@types/node": "^22",
         "@types/vscode": "1.103.0",
         "eslint": "9.34.0",
+        "mocha": "11.7.1",
+        "source-map-support": "0.5.21",
         "typescript-eslint": "8.41.0",
         "typescript": "5.8.3"
     },
@@ -18,7 +21,8 @@
         "build": "tsc",
         "start": "node dist/cli.js",
         "cli": "npm run build && node dist/cli.js",
-        "test": "npm run build && node test/run-tests.js",
+        "test": "mocha --timeout 10000 --require source-map-support/register --ui tdd out/test/**/*.js",
+    "test:witsandbox": "sandbox-exec.js -c -- mocha --require source-map-support/register --ui tdd out/test/**/*.js",
         "lint": "eslint --cache .",
         "lint:fix": "eslint --fix --cache .",
         "watch": "tsc -w -p ./"

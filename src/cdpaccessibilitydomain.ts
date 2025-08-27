@@ -61,7 +61,7 @@ interface AXNodeTree {
 	parent: AXNodeTree | null;
 }
 
-function createNodeTree(nodes: AXNode[]): AXNodeTree | null {
+export function createNodeTree(nodes: AXNode[]): AXNodeTree | null {
 	if (nodes.length === 0) {
 		return null;
 	}
@@ -407,7 +407,7 @@ function processDescriptionListNode(uri: URI, node: AXNodeTree, buffer: string[]
 	buffer.push('\n');
 }
 
-function processTableNode(node: AXNodeTree, buffer: string[]): void {
+export function processTableNode(node: AXNodeTree, buffer: string[]): void {
 	buffer.push('\n');
 
 	// Find rows
