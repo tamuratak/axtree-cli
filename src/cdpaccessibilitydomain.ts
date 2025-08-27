@@ -55,7 +55,7 @@ export type AXPropertyName = 'url' | 'busy' | 'disabled' | 'editable' | 'focusab
 
 //#endregion
 
-interface AXNodeTree {
+export interface AXNodeTree {
 	readonly node: AXNode;
 	readonly children: AXNodeTree[];
 	parent: AXNodeTree | null;
