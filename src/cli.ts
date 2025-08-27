@@ -2,6 +2,8 @@
 import { getFullAXTree } from './axtree'
 
 import fs from 'fs'
+import { AXNode, convertAXTreeToMarkdown } from './cdpaccessibilitydomain.js'
+import { URI } from 'vscode-uri'
 
 interface CliArgs {
   out?: string
@@ -89,10 +91,14 @@ async function main(argv: string[]) {
       timeoutMs: result.timeoutMs
     })
     const outStr = result.pretty ? JSON.stringify(ax, null, 2) : JSON.stringify(ax)
+    const md = convertAXTreeToMarkdown(URI.parse(result.target), ax.nodes as AXNode[])
+    console.log('--- Accessibility Tree (Markdown) ---')
+    console.log(md)
+    console.log('--- End of Accessibility Tree ---')
     if (result.out) {
       fs.writeFileSync(result.out, outStr)
     } else {
-      console.log(outStr)
+//      console.log(outStr)
     }
     process.exit(0)
   } catch (err) {
