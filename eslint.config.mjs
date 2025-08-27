@@ -101,7 +101,7 @@ const commonRules = {
 
 export default tseslint.config(
     {
-        ignores: [            
+        ignores: [
             "_output/",
             "eslint.config.mjs",
             "dev/",

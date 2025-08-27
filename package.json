@@ -3,13 +3,15 @@
     "version": "0.1.0",
     "private": true,
     "dependencies": {
-        "playwright": "^1.55.0"
+        "playwright": "^1.55.0",
+        "vscode-uri": "3.1.0"
     },
     "devDependencies": {
+        "@eslint/js": "9.34.0",
         "@types/node": "^22",
-        "eslint": "9.31.0",
-        "@eslint/js": "9.31.0",
-        "typescript-eslint": "8.37.0",
+        "@types/vscode": "1.103.0",
+        "eslint": "9.34.0",
+        "typescript-eslint": "8.41.0",
         "typescript": "5.8.3"
     },
     "scripts": {
@@ -18,7 +20,8 @@
         "cli": "npm run build && node dist/cli.js",
         "test": "npm run build && node test/run-tests.js",
         "lint": "eslint --cache .",
-        "lint:fix": "eslint --fix --cache ."
+        "lint:fix": "eslint --fix --cache .",
+        "watch": "tsc -w -p ./"
     },
     "bin": {
         "axtree": "./bin/axtree"
