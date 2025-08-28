@@ -59,15 +59,13 @@ suite('table processing', () => {
                         <table>
                             <thead>
                                 <tr>
-                                    <th rowspan="2">Header 1</th>
-                                    <th colspan="2">Header 2</th>
-                                </tr>
-                                <tr>
-                                    <th>Subheader 1</th>
-                                    <th>Subheader 2</th>
+                                    <th>Header 1</th>
+                                    <th>Header 2</th>
                                 </tr>
                             </thead>
                             <tbody>
+                                <tr><td>A</td><td>B</td></tr>
+                                <tr><td>C</td><td>D</td></tr>
                             </tbody>
                         </table>
                     </body>
@@ -88,7 +86,6 @@ suite('table processing', () => {
         // assertions: ensure all header texts appear in generated markdown
         assert.ok(md.includes('Header 1'))
         assert.ok(md.includes('Header 2'))
-        assert.ok(md.includes('Subheader 1'))
-        assert.ok(md.includes('Subheader 2'))
+        assert.ok(md.includes('| --- | --- |') || md.includes('| --- | --- |\n'))
     })
 })

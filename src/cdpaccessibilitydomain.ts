@@ -407,12 +407,13 @@ function processDescriptionListNode(uri: URI, node: AXNodeTree, buffer: string[]
 	buffer.push('\n');
 }
 
-export function processTableNode(node: AXNodeTree, buffer: string[]): void {
-	buffer.push('\n');
 
-	// Collect descendant rows (row nodes may be nested under rowgroups/thead/tbody)
+export function processTableNode(node: AXNodeTree, buffer: string[]): void {
+	buffer.push('\n')
+
+	// Collect all rows recursively (handles rowgroups, thead/tbody, etc.)
 	const rows: AXNodeTree[] = []
-	function collectRows(n: AXNodeTree): void {
+	function collectRows(n: AXNodeTree) {
 		const role = getNodeRole(n.node)
 		if (role.includes('row')) {
 			rows.push(n)
@@ -424,45 +425,38 @@ export function processTableNode(node: AXNodeTree, buffer: string[]): void {
 	collectRows(node)
 
 	if (rows.length > 0) {
-		// Determine how many leading rows are header rows. We treat consecutive rows
-		// that contain any header cells (columnheader/rowheader) as header rows.
-		let headerRowCount = 0
-		for (const r of rows) {
-			const hasHeaderCell = r.children.some(cell => getNodeRole(cell.node).includes('header'))
-			if (hasHeaderCell) {
-				headerRowCount++
-			} else {
-				break
+		// Prefer a row that contains explicit column headers (columnheader or header-like)
+		let headerRowIndex = rows.findIndex(r => r.children.some(c => {
+			const rr = getNodeRole(c.node)
+			return rr.includes('columnheader') || rr.toLowerCase().includes('header')
+		}))
+		if (headerRowIndex === -1) {
+			// fallback to the first row
+			headerRowIndex = 0
+		}
+
+		const headerRow = rows[headerRowIndex]
+
+		const headerCells = headerRow.children.filter(cell => {
+			const role = getNodeRole(cell.node)
+			return role.includes('columnheader') || role.includes('rowheader') || role.includes('header') || role.includes('cell')
+		})
+
+		// Generate header row
+		const headerContent = headerCells.map(cell => getNodeText(cell.node, false) || ' ')
+		buffer.push('| ' + headerContent.join(' | ') + ' |\n')
+
+		// Generate separator row
+		buffer.push('| ' + headerCells.map(() => '---').join(' | ') + ' |\n')
+
+		// Generate data rows: include all rows except the chosen header row
+		for (let i = 0; i < rows.length; i++) {
+			if (i === headerRowIndex) {
+				continue
 			}
-		}
-
-		// Fallback: if no header rows detected, treat the first row as header
-		if (headerRowCount === 0) {
-			headerRowCount = 1
-		}
-
-		// Build a combined header line containing all header cells across the header rows.
-		// This is a conservative approach that ensures header texts (including
-		// texts in rowspan/colspan setups) appear somewhere in the generated markdown.
-		const headerTexts: string[] = []
-		for (let i = 0; i < headerRowCount; i++) {
-			const hr = rows[i]
-			for (const cell of hr.children) {
-				const role = getNodeRole(cell.node)
-				if (role.includes('cell') || role.includes('header')) {
-					headerTexts.push(getNodeText(cell.node, false) || ' ')
-				}
-			}
-		}
-
-		buffer.push('| ' + headerTexts.join(' | ') + ' |\n')
-		buffer.push('| ' + headerTexts.map(() => '---').join(' | ') + ' |\n')
-
-		// Data rows: remaining rows after headerRowCount
-		for (let i = headerRowCount; i < rows.length; i++) {
 			const dataCells = rows[i].children.filter(cell => {
 				const role = getNodeRole(cell.node)
-				return role.includes('cell') || role.includes('header')
+				return role.includes('cell') || role.includes('columnheader') || role.includes('rowheader')
 			})
 			const rowContent = dataCells.map(cell => getNodeText(cell.node, false) || ' ')
 			buffer.push('| ' + rowContent.join(' | ') + ' |\n')
