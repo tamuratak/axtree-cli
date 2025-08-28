@@ -426,12 +426,12 @@ export function processTableNode(node: AXNodeTree, buffer: string[]): void {
 	}
 
 	if (rows.length > 0) {
-		const headerRow = rows.find(r => r.children.some(c => {
+		const headerRowIndex = rows.findIndex(r => r.children.some(c => {
 			const rr = getNodeRole(c.node)
 			return rr === 'columnheader'
-		})) || rows[0]
+		})) || 0;
 
-		const headerCells = headerRow.children.filter(cell => {
+		const headerCells = rows[headerRowIndex].children.filter(cell => {
 			const role = getNodeRole(cell.node)
 			return role === 'columnheader'
 		})
@@ -444,10 +444,13 @@ export function processTableNode(node: AXNodeTree, buffer: string[]): void {
 		buffer.push('| ' + headerCells.map(() => '---').join(' | ') + ' |\n')
 
 		// Generate data rows: include all rows except the chosen header row
-		for (const row of rows) {
-			const dataCells = row.children.filter(cell => {
+		for (let i = 0; i < rows.length; i++) {
+			if (i === headerRowIndex) {
+				continue;
+			}
+			const dataCells = rows[i].children.filter(cell => {
 				const role = getNodeRole(cell.node)
-				return role === 'cell' || role === 'columnheader' || role === 'rowheader'
+				return role === 'cell' || role === 'rowheader'
 			})
 			const rowContent = dataCells.map(cell => getNodeText(cell.node, false) || ' ')
 			buffer.push('| ' + rowContent.join(' | ') + ' |\n')
