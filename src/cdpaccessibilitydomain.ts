@@ -430,7 +430,10 @@ export function processTableNode(node: AXNodeTree, buffer: string[]): void {
 			const rr = getNodeRole(c.node);
 			return rr === 'columnheader';
 		}
-		const headerRowIndex = rows.findIndex(r => r.children.some(isColumnHeader)) || 0;
+		let headerRowIndex = rows.findIndex(r => r.children.some(isColumnHeader));
+		if (headerRowIndex === -1) {
+			headerRowIndex = 0;
+		}
 		const headerCells = rows[headerRowIndex].children.filter(isColumnHeader);
 
 		// Generate header row
