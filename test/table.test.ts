@@ -23,7 +23,7 @@ suite('table processing', () => {
         assert.ok(tree, 'expected non-null tree')
 
         // find first table node in tree (DFS)
-        function findTable(n: AXNodeTree | null): AXNodeTree | null {
+        const findTable = (n: AXNodeTree | null): AXNodeTree | null => {
             if (!n) {
                 return null
             }
