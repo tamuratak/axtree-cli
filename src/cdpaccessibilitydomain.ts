@@ -409,55 +409,48 @@ function processDescriptionListNode(uri: URI, node: AXNodeTree, buffer: string[]
 
 
 export function processTableNode(node: AXNodeTree, buffer: string[]): void {
-	buffer.push('\n')
-
-	const rows: AXNodeTree[] = []
+	const rows: AXNodeTree[] = [];
 	for (const c of node.children) {
-		const role = getNodeRole(c.node)
+		const role = getNodeRole(c.node);
 		if (role === 'row') {
-			rows.push(c)
+			rows.push(c);
 		}
 		for (const cc of c.children) {
-			const ccrole = getNodeRole(cc.node)
+			const ccrole = getNodeRole(cc.node);
 			if (ccrole === 'row') {
-				rows.push(cc)
+				rows.push(cc);
 			}
 		}
 	}
 
+	const isColumnHeader = (c: AXNodeTree) => {
+		const rr = getNodeRole(c.node);
+		return rr === 'columnheader';
+	}
+
 	if (rows.length > 0) {
-		const headerRowIndex = rows.findIndex(r => r.children.some(c => {
-			const rr = getNodeRole(c.node)
-			return rr === 'columnheader'
-		})) || 0;
-
-		const headerCells = rows[headerRowIndex].children.filter(cell => {
-			const role = getNodeRole(cell.node)
-			return role === 'columnheader'
-		})
-
+		buffer.push('\n')
+		const headerRowIndex = rows.findIndex(r => r.children.some(isColumnHeader)) || 0;
+		const headerCells = rows[headerRowIndex].children.filter(isColumnHeader);
 		// Generate header row
-		const headerContent = headerCells.map(cell => getNodeText(cell.node, false) || ' ')
-		buffer.push('| ' + headerContent.join(' | ') + ' |\n')
-
+		const headerContent = headerCells.map(cell => getNodeText(cell.node, false) || ' ');
+		buffer.push('| ' + headerContent.join(' | ') + ' |\n');
 		// Generate separator row
-		buffer.push('| ' + headerCells.map(() => '---').join(' | ') + ' |\n')
-
+		buffer.push('| ' + headerCells.map(() => '---').join(' | ') + ' |\n');
 		// Generate data rows: include all rows except the chosen header row
 		for (let i = 0; i < rows.length; i++) {
 			if (i === headerRowIndex) {
 				continue;
 			}
 			const dataCells = rows[i].children.filter(cell => {
-				const role = getNodeRole(cell.node)
-				return role === 'cell' || role === 'rowheader'
+				const role = getNodeRole(cell.node);
+				return role === 'cell' || role === 'rowheader';
 			})
-			const rowContent = dataCells.map(cell => getNodeText(cell.node, false) || ' ')
-			buffer.push('| ' + rowContent.join(' | ') + ' |\n')
+			const rowContent = dataCells.map(cell => getNodeText(cell.node, false) || ' ');
+			buffer.push('| ' + rowContent.join(' | ') + ' |\n');
 		}
+		buffer.push('\n');
 	}
-
-	buffer.push('\n')
 }
 
 function processCodeNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number): void {
