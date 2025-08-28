@@ -411,35 +411,29 @@ function processDescriptionListNode(uri: URI, node: AXNodeTree, buffer: string[]
 export function processTableNode(node: AXNodeTree, buffer: string[]): void {
 	buffer.push('\n')
 
-	// Collect all rows recursively (handles rowgroups, thead/tbody, etc.)
 	const rows: AXNodeTree[] = []
-	function collectRows(n: AXNodeTree) {
-		const role = getNodeRole(n.node)
-		if (role.includes('row')) {
-			rows.push(n)
+	for (const c of node.children) {
+		const role = getNodeRole(c.node)
+		if (role === 'row') {
+			rows.push(c)
 		}
-		for (const c of n.children) {
-			collectRows(c)
+		for (const cc of c.children) {
+			const ccrole = getNodeRole(cc.node)
+			if (ccrole === 'row') {
+				rows.push(cc)
+			}
 		}
 	}
-	collectRows(node)
 
 	if (rows.length > 0) {
-		// Prefer a row that contains explicit column headers (columnheader or header-like)
-		let headerRowIndex = rows.findIndex(r => r.children.some(c => {
+		const headerRow = rows.find(r => r.children.some(c => {
 			const rr = getNodeRole(c.node)
-			return rr.includes('columnheader') || rr.toLowerCase().includes('header')
-		}))
-		if (headerRowIndex === -1) {
-			// fallback to the first row
-			headerRowIndex = 0
-		}
-
-		const headerRow = rows[headerRowIndex]
+			return rr === 'columnheader'
+		})) || rows[0]
 
 		const headerCells = headerRow.children.filter(cell => {
 			const role = getNodeRole(cell.node)
-			return role.includes('columnheader') || role.includes('rowheader') || role.includes('header') || role.includes('cell')
+			return role === 'columnheader'
 		})
 
 		// Generate header row
@@ -450,13 +444,10 @@ export function processTableNode(node: AXNodeTree, buffer: string[]): void {
 		buffer.push('| ' + headerCells.map(() => '---').join(' | ') + ' |\n')
 
 		// Generate data rows: include all rows except the chosen header row
-		for (let i = 0; i < rows.length; i++) {
-			if (i === headerRowIndex) {
-				continue
-			}
-			const dataCells = rows[i].children.filter(cell => {
+		for (const row of rows) {
+			const dataCells = row.children.filter(cell => {
 				const role = getNodeRole(cell.node)
-				return role.includes('cell') || role.includes('columnheader') || role.includes('rowheader')
+				return role === 'cell' || role === 'columnheader' || role === 'rowheader'
 			})
 			const rowContent = dataCells.map(cell => getNodeText(cell.node, false) || ' ')
 			buffer.push('| ' + rowContent.join(' | ') + ' |\n')
