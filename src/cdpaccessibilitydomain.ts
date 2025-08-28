@@ -410,25 +410,56 @@ function processDescriptionListNode(uri: URI, node: AXNodeTree, buffer: string[]
 export function processTableNode(node: AXNodeTree, buffer: string[]): void {
 	buffer.push('\n');
 
-	// Find rows
-	const rows = node.children.filter(child => getNodeRole(child.node).includes('row'));
+	// Collect descendant rows (row nodes may be nested under rowgroups/thead/tbody)
+	const rows: AXNodeTree[] = []
+	function collectRows(n: AXNodeTree): void {
+		const role = getNodeRole(n.node)
+		if (role.includes('row')) {
+			rows.push(n)
+		}
+		for (const c of n.children) {
+			collectRows(c)
+		}
+	}
+	collectRows(node)
 
 	if (rows.length > 0) {
-		// First row as header. Accept both regular cells and header cells (columnheader/rowheader)
-		const headerCells = rows[0].children.filter(cell => {
-			const role = getNodeRole(cell.node)
-			return role.includes('cell') || role.includes('header')
-		})
+		// Determine how many leading rows are header rows. We treat consecutive rows
+		// that contain any header cells (columnheader/rowheader) as header rows.
+		let headerRowCount = 0
+		for (const r of rows) {
+			const hasHeaderCell = r.children.some(cell => getNodeRole(cell.node).includes('header'))
+			if (hasHeaderCell) {
+				headerRowCount++
+			} else {
+				break
+			}
+		}
 
-		// Generate header row
-		const headerContent = headerCells.map(cell => getNodeText(cell.node, false) || ' ');
-		buffer.push('| ' + headerContent.join(' | ') + ' |\n');
+		// Fallback: if no header rows detected, treat the first row as header
+		if (headerRowCount === 0) {
+			headerRowCount = 1
+		}
 
-		// Generate separator row
-		buffer.push('| ' + headerCells.map(() => '---').join(' | ') + ' |\n');
+		// Build a combined header line containing all header cells across the header rows.
+		// This is a conservative approach that ensures header texts (including
+		// texts in rowspan/colspan setups) appear somewhere in the generated markdown.
+		const headerTexts: string[] = []
+		for (let i = 0; i < headerRowCount; i++) {
+			const hr = rows[i]
+			for (const cell of hr.children) {
+				const role = getNodeRole(cell.node)
+				if (role.includes('cell') || role.includes('header')) {
+					headerTexts.push(getNodeText(cell.node, false) || ' ')
+				}
+			}
+		}
 
-		// Generate data rows
-		for (let i = 1; i < rows.length; i++) {
+		buffer.push('| ' + headerTexts.join(' | ') + ' |\n')
+		buffer.push('| ' + headerTexts.map(() => '---').join(' | ') + ' |\n')
+
+		// Data rows: remaining rows after headerRowCount
+		for (let i = headerRowCount; i < rows.length; i++) {
 			const dataCells = rows[i].children.filter(cell => {
 				const role = getNodeRole(cell.node)
 				return role.includes('cell') || role.includes('header')
@@ -438,7 +469,7 @@ export function processTableNode(node: AXNodeTree, buffer: string[]): void {
 		}
 	}
 
-	buffer.push('\n');
+	buffer.push('\n')
 }
 
 function processCodeNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number): void {

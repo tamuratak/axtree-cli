@@ -2,7 +2,22 @@ import * as assert from 'node:assert'
 import { suite, test } from 'mocha'
 import { getFullAXTreeFromHtml } from '../src/axtree'
 import { createNodeTree, processTableNode, AXNode, AXNodeTree } from '../src/cdpaccessibilitydomain'
-import { inspectReadable } from '../src/utils/inspect.js'
+
+function findTable(n: AXNodeTree | null): AXNodeTree | null {
+    if (!n) {
+        return null
+    }
+    if (n.node.role?.value === 'table') {
+        return n
+    }
+    for (const c of n.children) {
+        const r = findTable(c)
+        if (r) {
+            return r
+        }
+    }
+    return null
+}
 
 suite('table processing', () => {
     test('generates markdown table from html table', async () => {
@@ -22,23 +37,6 @@ suite('table processing', () => {
         const nodes = (ax as { nodes?: AXNode[] } | null)?.nodes ?? []
         const tree = createNodeTree(nodes)
         assert.ok(tree, 'expected non-null tree')
-
-        // find first table node in tree (DFS)
-        const findTable = (n: AXNodeTree | null): AXNodeTree | null => {
-            if (!n) {
-                return null
-            }
-            if (n.node.role?.value === 'table') {
-                return n
-            }
-            for (const c of n.children) {
-                const r = findTable(c)
-                if (r) {
-                    return r
-                }
-            }
-            return null
-        }
 
         const tableNode = findTable(tree)
         assert.ok(tableNode, 'expected table node')
@@ -78,25 +76,7 @@ suite('table processing', () => {
         const ax = await getFullAXTreeFromHtml(html)
         const nodes = (ax as { nodes?: AXNode[] } | null)?.nodes ?? []
         const tree = createNodeTree(nodes)
-        console.log(inspectReadable(tree))
         assert.ok(tree, 'expected non-null tree')
-
-        // find first table node in tree (DFS)
-        const findTable = (n: AXNodeTree | null): AXNodeTree | null => {
-            if (!n) {
-                return null
-            }
-            if (n.node.role?.value === 'table') {
-                return n
-            }
-            for (const c of n.children) {
-                const r = findTable(c)
-                if (r) {
-                    return r
-                }
-            }
-            return null
-        }
 
         const tableNode = findTable(tree)
         assert.ok(tableNode, 'expected table node')
