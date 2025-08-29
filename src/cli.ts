@@ -5,6 +5,7 @@ import fs from 'fs'
 import { AXNode, convertAXTreeToMarkdown } from './cdpaccessibilitydomain.js'
 import { URI } from 'vscode-uri'
 import { inspectReadable } from './utils/inspect'
+import { trimOptionalProperties } from './utils/ax.js'
 
 interface CliArgs {
     out?: string
@@ -97,7 +98,7 @@ async function main(argv: string[]) {
         const outStr = result.pretty ? JSON.stringify(ax, null, 2) : JSON.stringify(ax)
         if (result.raw) {
             // When --raw is requested, print only the ax object in a readable form to stdout
-            console.log(inspectReadable(ax))
+            console.log(inspectReadable({nodes: trimOptionalProperties(ax.nodes as AXNode[])}))
             // Still write JSON to file if requested
             if (result.out) {
                 fs.writeFileSync(result.out, outStr)
