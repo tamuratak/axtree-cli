@@ -4,10 +4,12 @@ import { getFullAXTree } from './axtree'
 import fs from 'fs'
 import { AXNode, convertAXTreeToMarkdown } from './cdpaccessibilitydomain.js'
 import { URI } from 'vscode-uri'
+import { inspectReadable } from './utils/inspect'
 
 interface CliArgs {
     out?: string
     pretty: boolean
+    raw?: boolean
     waitForMs: number
     waitForSelector?: string
     waitForStableMs: number
@@ -17,7 +19,7 @@ interface CliArgs {
 }
 
 function printUsage() {
-    console.log('Usage: axtree <url-or-path> [--out file.json] [--pretty] [--wait-for-ms N] [--wait-for-selector selector] [--timeout ms]')
+    console.log('Usage: axtree <url-or-path> [--out file.json] [--pretty] [--raw] [--wait-for-ms N] [--wait-for-selector selector] [--timeout ms]')
 }
 
 async function main(argv: string[]) {
@@ -29,6 +31,7 @@ async function main(argv: string[]) {
     const result: CliArgs = {
         out: undefined,
         pretty: false,
+        raw: false,
         waitForMs: 1000,
         waitForSelector: undefined,
         waitForStableMs: 500,
@@ -66,6 +69,7 @@ async function main(argv: string[]) {
                 const n = it.next(); if (n.done) { console.error('--wait-for-stable requires a number'); process.exit(2) }
                 result.waitForStableMs = Number(n.value); break
             }
+            case '--raw': result.raw = true; break
             case '--networkidle-ms': {
                 const n = it.next(); if (n.done) { console.error('--networkidle-ms requires a number'); process.exit(2) }
                 result.networkIdleMs = Number(n.value); break
@@ -91,6 +95,15 @@ async function main(argv: string[]) {
             timeoutMs: result.timeoutMs
         })
         const outStr = result.pretty ? JSON.stringify(ax, null, 2) : JSON.stringify(ax)
+        if (result.raw) {
+            // When --raw is requested, print only the ax object in a readable form to stdout
+            console.log(inspectReadable(ax))
+            // Still write JSON to file if requested
+            if (result.out) {
+                fs.writeFileSync(result.out, outStr)
+            }
+            process.exit(0)
+        }
         const md = convertAXTreeToMarkdown(URI.parse(result.target), ax.nodes as AXNode[])
         console.log('--- Accessibility Tree (Markdown) ---')
         console.log(md)
