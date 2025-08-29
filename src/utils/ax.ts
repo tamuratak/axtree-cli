@@ -1,4 +1,4 @@
-import { AXNode, AXValueType } from '../cdpaccessibilitydomain.js';
+import { AXNode } from '../cdpaccessibilitydomain.js';
 
 export function trimOptionalProperties(nodes: AXNode[]): AXNode[] {
     return nodes.map((node) => {
@@ -7,7 +7,7 @@ export function trimOptionalProperties(nodes: AXNode[]): AXNode[] {
             ignored: node.ignored,
             role: node.role,
             name: {
-                type: node.name?.type as AXValueType,
+                type: node.name?.type ?? 'valueUndefined',
                 value: node.name?.value
             },
             childIds: node.childIds,
