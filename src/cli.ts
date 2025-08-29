@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { getFullAXTree } from './axtree'
 
-import fs from 'fs'
 import { AXNode, convertAXTreeToMarkdown } from './cdpaccessibilitydomain.js'
 import { URI } from 'vscode-uri'
 import { inspectReadable } from './utils/inspect'
@@ -9,7 +8,6 @@ import { trimOptionalProperties } from './utils/ax.js'
 
 interface CliArgs {
     out?: string
-    pretty: boolean
     raw?: boolean
     waitForMs: number
     waitForSelector?: string
@@ -20,7 +18,7 @@ interface CliArgs {
 }
 
 function printUsage() {
-    console.log('Usage: axtree <url-or-path> [--out file.json] [--pretty] [--raw] [--wait-for-ms N] [--wait-for-selector selector] [--timeout ms]')
+    console.log('Usage: axtree <url-or-path> [--raw] [--wait-for-ms N] [--wait-for-selector selector] [--timeout ms]')
 }
 
 async function main(argv: string[]) {
@@ -30,8 +28,6 @@ async function main(argv: string[]) {
         process.exit(1)
     }
     const result: CliArgs = {
-        out: undefined,
-        pretty: false,
         raw: false,
         waitForMs: 1000,
         waitForSelector: undefined,
@@ -51,13 +47,6 @@ async function main(argv: string[]) {
             continue
         }
         switch (v) {
-            case '--out': {
-                const n = it.next()
-                if (n.done) { console.error('--out requires a file path'); process.exit(2) }
-                result.out = String(n.value)
-                break
-            }
-            case '--pretty': result.pretty = true; break
             case '--wait-for-ms': {
                 const n = it.next(); if (n.done) { console.error('--wait-for-ms requires a number'); process.exit(2) }
                 result.waitForMs = Number(n.value); break
@@ -95,24 +84,12 @@ async function main(argv: string[]) {
             networkIdleMs: result.networkIdleMs,
             timeoutMs: result.timeoutMs
         })
-        const outStr = result.pretty ? JSON.stringify(ax, null, 2) : JSON.stringify(ax)
         if (result.raw) {
-            // When --raw is requested, print only the ax object in a readable form to stdout
-            console.log(inspectReadable({nodes: trimOptionalProperties(ax.nodes as AXNode[])}))
-            // Still write JSON to file if requested
-            if (result.out) {
-                fs.writeFileSync(result.out, outStr)
-            }
-            process.exit(0)
-        }
-        const md = convertAXTreeToMarkdown(URI.parse(result.target), ax.nodes as AXNode[])
-        console.log('--- Accessibility Tree (Markdown) ---')
-        console.log(md)
-        console.log('--- End of Accessibility Tree ---')
-        if (result.out) {
-            fs.writeFileSync(result.out, outStr)
+            const readable = inspectReadable({ nodes: trimOptionalProperties(ax.nodes as AXNode[]) })
+            console.log(readable)
         } else {
-            //      console.log(outStr)
+            const md = convertAXTreeToMarkdown(URI.parse(result.target), ax.nodes as AXNode[])
+            console.log(md)
         }
         process.exit(0)
     } catch (err) {
