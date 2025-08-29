@@ -5,20 +5,20 @@
 
 import * as assert from 'assert';
 import { URI } from 'vscode-uri';
-import { AXNode, AXProperty, AXValueType, convertAXTreeToMarkdown } from '../src/cdpaccessibilitydomain.js';
+import { AXNode, AXProperty, AXPropertyName, AXValueType, convertAXTreeToMarkdown } from '../src/cdpaccessibilitydomain.js';
 
 
 suite('CDP Accessibility Domain', () => {
 
 	const testUri = URI.parse('https://example.com/test');
 
-	function createAXValue(type: AXValueType, value: any) {
+	function createAXValue(type: AXValueType, value: unknown) {
 		return { type, value };
 	}
 
-	function createAXProperty(name: string, value: any, type: AXValueType = 'string'): AXProperty {
+	function createAXProperty(name: AXPropertyName, value: unknown, type: AXValueType = 'string'): AXProperty {
 		return {
-			name: name as any,
+			name,
 			value: createAXValue(type, value)
 		};
 	}
