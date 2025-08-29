@@ -488,7 +488,13 @@ ${indent}- Item 1a
 				nodeId: 'table1',
 				ignored: false,
 				role: createAXValue('role', 'table'),
-				childIds: ['row1', 'row2', 'row3']
+				childIds: ['ignored']
+			},
+			{
+				nodeId: 'ignored',
+				ignored: true,
+				role: createAXValue('role', 'none'),
+				childIds: ['row1', 'row2', 'row3'],
 			},
 			{
 				nodeId: 'row1',
@@ -577,7 +583,7 @@ ${indent}- Item 1a
 				nodeId: 'table1',
 				ignored: false,
 				role: createAXValue('role', 'table'),
-				childIds: ['rowgroup1', 'row2', 'row3']
+				childIds: ['rowgroup1', 'ignored']
 			},
 			{
 				nodeId: 'rowgroup1',
@@ -604,6 +610,12 @@ ${indent}- Item 1a
 				role: createAXValue('role', 'columnheader'),
 				name: createAXValue('string', 'Header 2'),
 				childIds: ['cell2']
+			},
+			{
+				nodeId: 'ignored',
+				ignored: true,
+				role: createAXValue('role', 'none'),
+				childIds: ['row2', 'row3'],
 			},
 			{
 				nodeId: 'row2',
