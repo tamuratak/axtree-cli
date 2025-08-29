@@ -7,7 +7,8 @@
 - All file names should not include hyphens, spaces, nor underscores.
 - Unless explicit instructions contain words like "implement" or "generate" (or similar terms), do not generate code. Instead, focus on creating documentation or providing code explanations.
 - After editing files using tools like `copilot_insertEdit`, `apply_patch`, or `insert_edit_into_file`, please check for any new errors caused by your changes by running `copilot_getErrors`.
-
+- Do not run the build command after making edits, since the build watch process runs in the background. Just run `copilot_getErrors`.
+- To run tests, use `npm test`.
 
 ### Instructions only in ACTION MODE
 
