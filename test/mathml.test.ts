@@ -499,7 +499,7 @@ suite('CDP Accessibility Domain', () => {
         ]
 
 		const result = convertAXTreeToMarkdown(testUri, nodes);
-		const expected = `ax^2+bx+c=0`;
+		const expected = 'ax^2+bx+c=0';
 		assert.strictEqual(result, expected);
     })
     //#endregion

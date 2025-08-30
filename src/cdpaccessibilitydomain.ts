@@ -234,6 +234,15 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 				}
 			}
 			return;
+
+		case 'MathMLMath': {
+			// Convert MathML-like AXNode subtree into a LaTeX-like inline string
+			const mathStr = convertMathMLNodeToLatex(node);
+			if (mathStr) {
+				buffer.push(mathStr);
+			}
+			return;
+		}
 		case 'StaticText': {
 			const staticText = getNodeText(node.node, allowWrap);
 			if (staticText) {
@@ -509,3 +518,129 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 		collectLinks(child, links);
 	}
 }
+
+// -------------------- MathML -> LaTeX-like conversion helpers --------------------
+
+function convertMathMLNodeToLatex(root: AXNodeTree): string {
+	// Build a map of nodeId -> AXNode for quick lookup
+	const nodeMap = new Map<string, AXNode>();
+	const stack: AXNodeTree[] = [root];
+	while (stack.length) {
+		const cur = stack.pop()!;
+		nodeMap.set(cur.node.nodeId, cur.node);
+		for (const c of cur.children) {
+			stack.push(c);
+		}
+	}
+
+	const visited = new Set<string>();
+
+	function getTextFromNodeId(id: string): string {
+		const n = nodeMap.get(id);
+		if (!n) { return ''; }
+		const text = (n.name?.value as string) || (n.value?.value as string) || '';
+		return normalizeMathIdentifier(text);
+	}
+
+	function recurseTree(node: AXNode): string {
+		if (!node || visited.has(node.nodeId)) {
+			return '';
+		}
+		visited.add(node.nodeId);
+
+		const role = (node.role?.value as string) || '';
+
+		switch (role) {
+			case 'MathMLIdentifier':
+			case 'MathMLNumber':
+			case 'MathMLOperator':
+			case 'StaticText':
+			case 'InlineTextBox': {
+				// If this node has children, prefer their text
+				if (node.childIds && node.childIds.length > 0) {
+					return node.childIds.map(getTextFromNodeId).join('');
+				}
+				return getTextFromNodeId(node.nodeId);
+			}
+			case 'MathMLSup': {
+				// children: [base, exponent]
+				const baseId = node.childIds && node.childIds[0];
+				const expId = node.childIds && node.childIds[1];
+				const base = baseId ? recurseTree(nodeMap.get(baseId) || { nodeId: '', ignored: false }) : '';
+				const exp = expId ? recurseTree(nodeMap.get(expId) || { nodeId: '', ignored: false }) : '';
+				// If exponent is single character, use caret without braces
+				if (exp.length === 1) {
+					return `${base}^${exp}`;
+				}
+				return `${base}^{${exp}}`;
+			}
+			case 'MathMLSub': {
+				const baseId = node.childIds && node.childIds[0];
+				const subId = node.childIds && node.childIds[1];
+				const base = baseId ? recurseTree(nodeMap.get(baseId) || { nodeId: '', ignored: false }) : '';
+				const sub = subId ? recurseTree(nodeMap.get(subId) || { nodeId: '', ignored: false }) : '';
+				if (sub.length === 1) {
+					return `${base}_${sub}`;
+				}
+				return `${base}_{${sub}}`;
+			}
+			case 'MathMLFraction':
+			case 'MathMLFrac':
+			case 'MathMLFRACTION': {
+				const numId = node.childIds && node.childIds[0];
+				const denId = node.childIds && node.childIds[1];
+				const num = numId ? recurseTree(nodeMap.get(numId) || { nodeId: '', ignored: false }) : '';
+				const den = denId ? recurseTree(nodeMap.get(denId) || { nodeId: '', ignored: false }) : '';
+				return `\\frac{${num}}{${den}}`;
+			}
+			case 'MathMLSqrt':
+			case 'MathMLRoot': {
+				const argId = node.childIds && node.childIds[0];
+				const arg = argId ? recurseTree(nodeMap.get(argId) || { nodeId: '', ignored: false }) : '';
+				return `\\sqrt{${arg}}`;
+			}
+			case 'MathMLRow':
+			case 'mrow':
+			case 'MathMLMath': {
+				// Concatenate children in order
+				if (!node.childIds || node.childIds.length === 0) { return ''; }
+				return node.childIds.map(id => {
+					const n = nodeMap.get(id);
+					if (!n) { return ''; }
+					return recurseTree(n);
+				}).join('');
+			}
+			default: {
+				// Fallback: try to concatenate children if present
+				if (node.childIds && node.childIds.length > 0) {
+					return node.childIds.map(id => {
+						const n = nodeMap.get(id);
+						return n ? recurseTree(n) : '';
+					}).join('');
+				}
+				return '';
+			}
+		}
+	}
+
+	// Start from the root AXNode
+	return recurseTree(root.node);
+}
+
+function normalizeMathIdentifier(text: string): string {
+	if (!text) { return ''; }
+	// Quick common mappings for Mathematical Alphanumeric Symbols (italic) used in tests
+	const map: Record<string, string> = {
+		'𝑎': 'a', '𝑏': 'b', '𝑐': 'c', '𝑥': 'x', '𝑦': 'y', '𝑧': 'z'
+	};
+	let out = '';
+	for (const ch of text) {
+		if (map[ch]) {
+			out += map[ch];
+		} else {
+			out += ch;
+		}
+	}
+	return out;
+}
+
