@@ -522,17 +522,6 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 // -------------------- MathML -> LaTeX-like conversion helpers --------------------
 
 function convertMathMLNodeToLatex(root: AXNodeTree): string {
-	// Build a map of nodeId -> AXNode for quick lookup
-	const nodeMap = new Map<string, AXNode>();
-	const stack: AXNodeTree[] = [root];
-	while (stack.length) {
-		const cur = stack.pop()!;
-		nodeMap.set(cur.node.nodeId, cur.node);
-		for (const c of cur.children) {
-			stack.push(c);
-		}
-	}
-
 	const visited = new Set<string>();
 
 	// Lightweight internal representation for matrices so we can choose
@@ -554,29 +543,27 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return typeof x === 'string' ? x : renderMatrixStruct(x);
 	}
 
-	function getTextFromNodeId(id: string): string {
-		const n = nodeMap.get(id);
+	function getTextFromNodeId(n: AXNodeTree): string {
 		if (!n) { return ''; }
-		const text = (n.name?.value as string) || (n.value?.value as string) || '';
+		const text = (n.node.name?.value as string) || (n.node.value?.value as string) || '';
 		return normalizeMathIdentifier(text);
 	}
 
-	function recurseTree(node: AXNode): string | MatrixStruct {
-		if (!node || visited.has(node.nodeId)) {
+	function recurseTree(node: AXNodeTree): string | MatrixStruct {
+		if (!node || visited.has(node.node.nodeId)) {
 			return '';
 		}
-		visited.add(node.nodeId);
+		visited.add(node.node.nodeId);
 
-		const role = (node.role?.value as string) || '';
+		const role = (node.node.role?.value as string) || '';
 
 		// Helper to render children concatenated. Children may return
 		// either strings or MatrixStruct objects; renderMaybeMatrix
 		// normalizes them to strings.
-		const concatChildren = (n: AXNode) => {
-			if (!n.childIds || n.childIds.length === 0) { return ''; }
-			return n.childIds.map(id => {
-				const child = nodeMap.get(id);
-				return child ? renderMaybeMatrix(recurseTree(child)) : '';
+		const concatChildren = (n: AXNodeTree) => {
+			if (n.children.length === 0) { return ''; }
+			return n.children.map(child => {
+				return renderMaybeMatrix(recurseTree(child));
 			}).join('');
 		};
 
@@ -586,10 +573,10 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			case 'StaticText':
 			case 'InlineTextBox':
 				// Prefer children text if present
-				return node.childIds && node.childIds.length > 0 ? node.childIds.map(getTextFromNodeId).join('') : getTextFromNodeId(node.nodeId);
+				return node.children.length > 0 ? node.children.map(getTextFromNodeId).join('') : getTextFromNodeId(node);
 
 			case 'MathMLOperator': {
-				const text = node.childIds && node.childIds.length > 0 ? node.childIds.map(getTextFromNodeId).join('') : getTextFromNodeId(node.nodeId);
+				const text = node.children.length > 0 ? node.children.map(getTextFromNodeId).join('') : getTextFromNodeId(node);
 				const trimmed = text.trim();
 				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
 				if (funcNames.has(trimmed)) {
@@ -599,40 +586,31 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			}
 
 			case 'MathMLSup': {
-				const base = node.childIds && node.childIds[0] ? renderMaybeMatrix(recurseTree(nodeMap.get(node.childIds[0])!)) : '';
-				const exp = node.childIds && node.childIds[1] ? renderMaybeMatrix(recurseTree(nodeMap.get(node.childIds[1])!)) : '';
+				const base = node.children[0] ? renderMaybeMatrix(recurseTree(node.children[0])) : '';
+				const exp = node.children[1] ? renderMaybeMatrix(recurseTree(node.children[1])) : '';
 				return exp.length === 1 ? `${base}^${exp}` : `${base}^{${exp}}`;
 			}
 
 			case 'MathMLSub': {
-				const base = node.childIds && node.childIds[0] ? renderMaybeMatrix(recurseTree(nodeMap.get(node.childIds[0])!)) : '';
-				const sub = node.childIds && node.childIds[1] ? renderMaybeMatrix(recurseTree(nodeMap.get(node.childIds[1])!)) : '';
+				const base = node.children[0] ? renderMaybeMatrix(recurseTree(node.children[0])) : '';
+				const sub = node.children[1] ? renderMaybeMatrix(recurseTree(node.children[1])) : '';
 				return sub.length === 1 ? `${base}_${sub}` : `${base}_{${sub}}`;
 			}
 
 			case 'MathMLTable': {
 				// Build a structural representation of the matrix (rows)
 				const rows: string[] = [];
-				if (!node.childIds) { return ''; }
-				for (const rowId of node.childIds) {
-					const rowNode = nodeMap.get(rowId);
-					if (!rowNode) { continue; }
-					if ((rowNode.role?.value as string) === 'MathMLTableRow') {
+				for (const child of node.children) {
+					if ((child.node.role?.value as string) === 'MathMLTableRow') {
 						const cells: string[] = [];
-						if (rowNode.childIds) {
-							for (const cellId of rowNode.childIds) {
-								const cellNode = nodeMap.get(cellId);
-								if (!cellNode) { continue; }
-								// cell content may be nested nodes; use renderMaybeMatrix
-								const cellText = cellNode.childIds && cellNode.childIds.length > 0
-									? cellNode.childIds.map(id => {
-										const n = nodeMap.get(id);
-										return n ? renderMaybeMatrix(recurseTree(n)) : '';
+							for (const cellChild of child.children) {
+								const cellText = cellChild.children.length > 0
+									? cellChild.children.map(n => {
+										return renderMaybeMatrix(recurseTree(n))
 									}).join('')
-									: renderMaybeMatrix(recurseTree(cellNode));
+									: renderMaybeMatrix(recurseTree(cellChild));
 								cells.push(cellText);
 							}
-						}
 						rows.push(cells.join(' & '));
 					}
 				}
@@ -644,10 +622,9 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			case 'mrow':
 			case 'MathMLMath': {
 				// Build tokens from children
-				const tokens = node.childIds ? node.childIds.map(id => {
-					const n = nodeMap.get(id);
-					return n ? recurseTree(n) : '';
-				}) : [] as (string | MatrixStruct)[];
+				const tokens = node.children.map(child => {
+					return recurseTree(child)
+				}) satisfies (string | MatrixStruct)[];
 
 				// If pattern is a fenced matrix like '|' + pmatrix + '|' or '‖' + pmatrix + '‖', convert to vmatrix/Vmatrix
 				const firstNonEmpty = tokens.findIndex(t => typeof t !== 'string' ? true : t !== '');
@@ -728,7 +705,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	}
 
 	// Start from the root AXNode and ensure we always return a string
-	return renderMaybeMatrix(recurseTree(root.node));
+	return renderMaybeMatrix(recurseTree(root));
 }
 
 function normalizeMathIdentifier(text: string): string {
