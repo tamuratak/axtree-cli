@@ -674,7 +674,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 						}
 
 						// If the middle is strings (or mixed), fallback to rendering them into a string
-						const middle = middleTokens.map(t => typeof t === 'string' ? t : renderMatrixStruct(t)).join('');
+						const middle = middleTokens.map(t => renderMaybeMatrix(t)).join('');
 						if (middle.startsWith('\\begin{pmatrix}')) {
 							// single vertical bar fence -> vmatrix
 							if (firstTok === '|' && lastTok === '|') {
@@ -695,7 +695,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 							if (middleTokens.length === 1 && typeof middleTokens[0] !== 'string') {
 								return renderMatrixStruct(middleTokens[0]);
 							}
-							const middle = middleTokens.map(t => typeof t === 'string' ? t : renderMatrixStruct(t)).join('');
+							const middle = middleTokens.map(t => renderMaybeMatrix(t)).join('');
 							if (middle.startsWith('\\begin{pmatrix}')) {
 								return middle;
 							}
@@ -716,7 +716,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 							continue;
 						}
 					}
-					out += typeof t === 'string' ? t : renderMatrixStruct(t);
+					out += renderMaybeMatrix(t);
 				}
 				return out;
 			}
