@@ -625,75 +625,29 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				const tokens = node.children.map(child => {
 					return recurseTree(child)
 				}) satisfies (string | MatrixStruct)[];
-
-				// If pattern is a fenced matrix like '|' + pmatrix + '|' or '‖' + pmatrix + '‖', convert to vmatrix/Vmatrix
-				const firstNonEmpty = tokens.findIndex(t => typeof t !== 'string' ? true : t !== '');
-				if (firstNonEmpty !== -1) {
-					// find last non-empty
-					let lastNonEmpty = tokens.length - 1;
-					while (lastNonEmpty >= 0 && (typeof tokens[lastNonEmpty] === 'string' ? tokens[lastNonEmpty] === '' : false)) { lastNonEmpty--; }
-					if (lastNonEmpty > firstNonEmpty) {
-						const firstTok = tokens[firstNonEmpty];
-						const lastTok = tokens[lastNonEmpty];
-						const middleTokens = tokens.slice(firstNonEmpty + 1, lastNonEmpty);
-
-						// If the middle is a single MatrixStruct, we can pick the env directly.
-						if (middleTokens.length === 1 && typeof middleTokens[0] !== 'string') {
-							const middleMatrix = middleTokens[0];
-							// single vertical bar fence -> vmatrix
-							if (firstTok === '|' && lastTok === '|') {
-								return renderMatrixStruct({ ...middleMatrix, env: 'vmatrix' });
-							}
-							// double vertical bar fence (either '||' or U+2016 '‖') -> Vmatrix
-							if ((firstTok === '||' || firstTok === '‖') && (lastTok === '||' || lastTok === '‖')) {
-								return renderMatrixStruct({ ...middleMatrix, env: 'Vmatrix' });
-							}
-						}
-
-						// If the middle is strings (or mixed), fallback to rendering them into a string
-						const middle = middleTokens.map(t => renderMaybeMatrix(t)).join('');
-						if (middle.startsWith('\\begin{pmatrix}')) {
-							// single vertical bar fence -> vmatrix
-							if (firstTok === '|' && lastTok === '|') {
-								return middle.replace('{pmatrix}', '{vmatrix}').replace('\\end{pmatrix}', '\\end{vmatrix}');
-							}
-							if ((firstTok === '||' || firstTok === '‖') && (lastTok === '||' || lastTok === '‖')) {
-								return middle.replace('{pmatrix}', '{Vmatrix}').replace('\\end{pmatrix}', '\\end{Vmatrix}');
-							}
-						}
-					}
-					// look for '(' then a pmatrix then ')'
-					const firstTokVal = tokens[firstNonEmpty];
-					const lastTokVal = tokens[lastNonEmpty];
-					if (typeof firstTokVal === 'string' && firstTokVal === '(') {
-						if (lastNonEmpty > firstNonEmpty && typeof lastTokVal === 'string' && lastTokVal === ')') {
-							// check middle tokens form a pmatrix structure
-							const middleTokens = tokens.slice(firstNonEmpty + 1, lastNonEmpty);
-							if (middleTokens.length === 1 && typeof middleTokens[0] !== 'string') {
-								return renderMatrixStruct(middleTokens[0]);
-							}
-							const middle = middleTokens.map(t => renderMaybeMatrix(t)).join('');
-							if (middle.startsWith('\\begin{pmatrix}')) {
-								return middle;
-							}
-						}
-					}
-				}
-
-				// otherwise, try to detect function names followed by parentheses
 				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
 				let out = '';
 				for (let i = 0; i < tokens.length; i++) {
 					const t = tokens[i];
-					if (typeof t === 'string' && t && funcNames.has(t)) {
-						// find next non-empty
-						let j = i + 1; while (j < tokens.length && (typeof tokens[j] === 'string' ? tokens[j] === '' : false)) { j++; }
-						if (j < tokens.length && typeof tokens[j] === 'string' && (tokens[j] as string).startsWith('(')) {
+					if (typeof t === 'string') {
+						const nextToken = tokens[i+1];
+						if (nextToken && typeof nextToken !== 'string') {
+							if (t === '(') {
+								out += renderMatrixStruct(nextToken);
+							} else if (t === '|') {
+								nextToken.env = 'vmatrix';
+								out += renderMatrixStruct(nextToken);
+							} else if (t === '‖' || t === '∥') {
+								nextToken.env = 'Vmatrix';
+								out += renderMatrixStruct(nextToken);
+							}
+							i += 2;
+						} else if (funcNames.has(t)) {
 							out += `\\${t}`;
-							continue;
+						} else {
+							out += t;
 						}
 					}
-					out += renderMaybeMatrix(t);
 				}
 				return out;
 			}
