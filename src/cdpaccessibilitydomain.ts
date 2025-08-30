@@ -553,7 +553,6 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		switch (role) {
 			case 'MathMLIdentifier':
 			case 'MathMLNumber':
-			case 'MathMLOperator':
 			case 'StaticText':
 			case 'InlineTextBox': {
 				// If this node has children, prefer their text
@@ -561,6 +560,24 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 					return node.childIds.map(getTextFromNodeId).join('');
 				}
 				return getTextFromNodeId(node.nodeId);
+			}
+			case 'MathMLOperator': {
+				// Operators can be symbols like + or names like sin, cos.
+				let text = '';
+				if (node.childIds && node.childIds.length > 0) {
+					text = node.childIds.map(getTextFromNodeId).join('');
+				} else {
+					text = getTextFromNodeId(node.nodeId);
+				}
+				const trimmed = text.trim();
+				const funcNames = new Set([
+					'sin','cos','tan','sec','csc','cot','arcsin','arccos','arctan',
+					'sinh','cosh','tanh','log','ln','exp','max','min'
+				]);
+				if (funcNames.has(trimmed)) {
+					return `\\${trimmed}`;
+				}
+				return text;
 			}
 			case 'MathMLSup': {
 				// children: [base, exponent]
@@ -602,13 +619,29 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			case 'MathMLRow':
 			case 'mrow':
 			case 'MathMLMath': {
-				// Concatenate children in order
+				// Concatenate children in order, but detect function names followed by parentheses
 				if (!node.childIds || node.childIds.length === 0) { return ''; }
-				return node.childIds.map(id => {
+				const tokens = node.childIds.map(id => {
 					const n = nodeMap.get(id);
 					if (!n) { return ''; }
 					return recurseTree(n);
-				}).join('');
+				});
+				const funcNames = new Set(['sin','cos','tan','sec','csc','cot','arcsin','arccos','arctan','sinh','cosh','tanh','log','ln','exp','max','min']);
+				let outStr = '';
+				for (let i = 0; i < tokens.length; i++) {
+					const t = tokens[i];
+					if (t && funcNames.has(t)) {
+						// find next non-empty token
+						let j = i + 1;
+						while (j < tokens.length && tokens[j] === '') { j++; }
+						if (j < tokens.length && tokens[j].startsWith('(')) {
+							outStr += `\\${t}`;
+							continue;
+						}
+					}
+					outStr += t;
+				}
+				return outStr;
 			}
 			default: {
 				// Fallback: try to concatenate children if present
