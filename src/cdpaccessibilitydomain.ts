@@ -521,29 +521,25 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 
 // -------------------- MathML -> LaTeX-like conversion helpers --------------------
 
+interface MatrixStruct {
+	kind: 'matrix';
+	rows: string[]; // each row like 'a & b & c'
+	env: 'pmatrix' | 'vmatrix' | 'Vmatrix';
+}
+
 function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	const visited = new Set<string>();
 
-	// Lightweight internal representation for matrices so we can choose
-	// the correct LaTeX environment (pmatrix/vmatrix/Vmatrix) without
-	// relying on fragile string replace operations later.
-	type MatrixEnv = 'pmatrix' | 'vmatrix' | 'Vmatrix';
-	interface MatrixStruct {
-		kind: 'matrix';
-		rows: string[]; // each row like 'a & b & c'
-		env: MatrixEnv;
-	}
-
-	function renderToken(x: string | MatrixStruct): string {
+	const renderToken = (x: string | MatrixStruct): string => {
 		return typeof x === 'string' ? x : `\\begin{${x.env}}\n${x.rows.join(' \\\\\n')}\n\\end{${x.env}}`;
-	}
+	};
 
-	function getTextFromNode(n: AXNodeTree): string {
+	const getTextFromNode = (n: AXNodeTree): string => {
 		const text = (n.node.name?.value as string) || '';
 		return normalizeMathIdentifier(text);
 	}
 
-	function recurseTree(node: AXNodeTree): string | MatrixStruct {
+	const recurseTree = (node: AXNodeTree): string | MatrixStruct => {
 		if (!node || visited.has(node.node.nodeId)) {
 			return '';
 		}
