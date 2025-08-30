@@ -535,6 +535,25 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 	const visited = new Set<string>();
 
+	// Lightweight internal representation for matrices so we can choose
+	// the correct LaTeX environment (pmatrix/vmatrix/Vmatrix) without
+	// relying on fragile string replace operations later.
+	type MatrixEnv = 'pmatrix' | 'vmatrix' | 'Vmatrix';
+	interface MatrixStruct {
+		kind: 'matrix';
+		rows: string[]; // each row like 'a & b & c'
+		env: MatrixEnv;
+	}
+
+	function renderMatrixStruct(m: MatrixStruct): string {
+		return `\\begin{${m.env}}\n${m.rows.join(' \\\\\n')}
+\\end{${m.env}}`;
+	}
+
+	function renderMaybeMatrix(x: string | MatrixStruct): string {
+		return typeof x === 'string' ? x : renderMatrixStruct(x);
+	}
+
 	function getTextFromNodeId(id: string): string {
 		const n = nodeMap.get(id);
 		if (!n) { return ''; }
@@ -542,7 +561,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return normalizeMathIdentifier(text);
 	}
 
-	function recurseTree(node: AXNode): string {
+	function recurseTree(node: AXNode): string | MatrixStruct {
 		if (!node || visited.has(node.nodeId)) {
 			return '';
 		}
@@ -550,12 +569,14 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 		const role = (node.role?.value as string) || '';
 
-		// Helper to render children concatenated
+		// Helper to render children concatenated. Children may return
+		// either strings or MatrixStruct objects; renderMaybeMatrix
+		// normalizes them to strings.
 		const concatChildren = (n: AXNode) => {
 			if (!n.childIds || n.childIds.length === 0) { return ''; }
 			return n.childIds.map(id => {
 				const child = nodeMap.get(id);
-				return child ? recurseTree(child) : '';
+				return child ? renderMaybeMatrix(recurseTree(child)) : '';
 			}).join('');
 		};
 
@@ -578,33 +599,19 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			}
 
 			case 'MathMLSup': {
-				const base = node.childIds && node.childIds[0] ? recurseTree(nodeMap.get(node.childIds[0])!) : '';
-				const exp = node.childIds && node.childIds[1] ? recurseTree(nodeMap.get(node.childIds[1])!) : '';
+				const base = node.childIds && node.childIds[0] ? renderMaybeMatrix(recurseTree(nodeMap.get(node.childIds[0])!)) : '';
+				const exp = node.childIds && node.childIds[1] ? renderMaybeMatrix(recurseTree(nodeMap.get(node.childIds[1])!)) : '';
 				return exp.length === 1 ? `${base}^${exp}` : `${base}^{${exp}}`;
 			}
 
 			case 'MathMLSub': {
-				const base = node.childIds && node.childIds[0] ? recurseTree(nodeMap.get(node.childIds[0])!) : '';
-				const sub = node.childIds && node.childIds[1] ? recurseTree(nodeMap.get(node.childIds[1])!) : '';
+				const base = node.childIds && node.childIds[0] ? renderMaybeMatrix(recurseTree(nodeMap.get(node.childIds[0])!)) : '';
+				const sub = node.childIds && node.childIds[1] ? renderMaybeMatrix(recurseTree(nodeMap.get(node.childIds[1])!)) : '';
 				return sub.length === 1 ? `${base}_${sub}` : `${base}_{${sub}}`;
 			}
 
-			case 'MathMLFraction':
-			case 'MathMLFrac':
-			case 'MathMLFRACTION': {
-				const num = node.childIds && node.childIds[0] ? recurseTree(nodeMap.get(node.childIds[0])!) : '';
-				const den = node.childIds && node.childIds[1] ? recurseTree(nodeMap.get(node.childIds[1])!) : '';
-				return `\\frac{${num}}{${den}}`;
-			}
-
-			case 'MathMLSqrt':
-			case 'MathMLRoot': {
-				const arg = node.childIds && node.childIds[0] ? recurseTree(nodeMap.get(node.childIds[0])!) : '';
-				return `\\sqrt{${arg}}`;
-			}
-
 			case 'MathMLTable': {
-				// Convert table-like structure to LaTeX pmatrix
+				// Build a structural representation of the matrix (rows)
 				const rows: string[] = [];
 				if (!node.childIds) { return ''; }
 				for (const rowId of node.childIds) {
@@ -616,20 +623,21 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 							for (const cellId of rowNode.childIds) {
 								const cellNode = nodeMap.get(cellId);
 								if (!cellNode) { continue; }
-								// cell content may be nested nodes
+								// cell content may be nested nodes; use renderMaybeMatrix
 								const cellText = cellNode.childIds && cellNode.childIds.length > 0
 									? cellNode.childIds.map(id => {
 										const n = nodeMap.get(id);
-										return n ? recurseTree(n) : '';
+										return n ? renderMaybeMatrix(recurseTree(n)) : '';
 									}).join('')
-									: recurseTree(cellNode);
+									: renderMaybeMatrix(recurseTree(cellNode));
 								cells.push(cellText);
 							}
 						}
 						rows.push(cells.join(' & '));
 					}
 				}
-				return `\\begin{pmatrix}\n${rows.join(' \\\\\n')}\n\\end{pmatrix}`;
+				const matrix: MatrixStruct = { kind: 'matrix', rows, env: 'pmatrix' };
+				return matrix;
 			}
 
 			case 'MathMLRow':
@@ -639,34 +647,55 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				const tokens = node.childIds ? node.childIds.map(id => {
 					const n = nodeMap.get(id);
 					return n ? recurseTree(n) : '';
-				}) : [];
+				}) : [] as (string | MatrixStruct)[];
 
 				// If pattern is a fenced matrix like '|' + pmatrix + '|' or '‖' + pmatrix + '‖', convert to vmatrix/Vmatrix
-				const firstNonEmpty = tokens.findIndex(t => t !== '');
+				const firstNonEmpty = tokens.findIndex(t => typeof t !== 'string' ? true : t !== '');
 				if (firstNonEmpty !== -1) {
 					// find last non-empty
 					let lastNonEmpty = tokens.length - 1;
-					while (lastNonEmpty >= 0 && tokens[lastNonEmpty] === '') { lastNonEmpty--; }
+					while (lastNonEmpty >= 0 && (typeof tokens[lastNonEmpty] === 'string' ? tokens[lastNonEmpty] === '' : false)) { lastNonEmpty--; }
 					if (lastNonEmpty > firstNonEmpty) {
 						const firstTok = tokens[firstNonEmpty];
 						const lastTok = tokens[lastNonEmpty];
-						const middle = tokens.slice(firstNonEmpty + 1, lastNonEmpty).join('');
+						const middleTokens = tokens.slice(firstNonEmpty + 1, lastNonEmpty);
+
+						// If the middle is a single MatrixStruct, we can pick the env directly.
+						if (middleTokens.length === 1 && typeof middleTokens[0] !== 'string') {
+							const middleMatrix = middleTokens[0];
+							// single vertical bar fence -> vmatrix
+							if (firstTok === '|' && lastTok === '|') {
+								return renderMatrixStruct({ ...middleMatrix, env: 'vmatrix' });
+							}
+							// double vertical bar fence (either '||' or U+2016 '‖') -> Vmatrix
+							if ((firstTok === '||' || firstTok === '‖') && (lastTok === '||' || lastTok === '‖')) {
+								return renderMatrixStruct({ ...middleMatrix, env: 'Vmatrix' });
+							}
+						}
+
+						// If the middle is strings (or mixed), fallback to rendering them into a string
+						const middle = middleTokens.map(t => typeof t === 'string' ? t : renderMatrixStruct(t)).join('');
 						if (middle.startsWith('\\begin{pmatrix}')) {
 							// single vertical bar fence -> vmatrix
 							if (firstTok === '|' && lastTok === '|') {
 								return middle.replace('{pmatrix}', '{vmatrix}').replace('\\end{pmatrix}', '\\end{vmatrix}');
 							}
-							// double vertical bar fence (either '||' or U+2016 '‖') -> Vmatrix
 							if ((firstTok === '||' || firstTok === '‖') && (lastTok === '||' || lastTok === '‖')) {
 								return middle.replace('{pmatrix}', '{Vmatrix}').replace('\\end{pmatrix}', '\\end{Vmatrix}');
 							}
 						}
 					}
 					// look for '(' then a pmatrix then ')'
-					if (tokens[firstNonEmpty] === '(') {
-						if (lastNonEmpty > firstNonEmpty && tokens[lastNonEmpty] === ')') {
-							// check middle tokens form a pmatrix string
-							const middle = tokens.slice(firstNonEmpty + 1, lastNonEmpty).join('');
+					const firstTokVal = tokens[firstNonEmpty];
+					const lastTokVal = tokens[lastNonEmpty];
+					if (typeof firstTokVal === 'string' && firstTokVal === '(') {
+						if (lastNonEmpty > firstNonEmpty && typeof lastTokVal === 'string' && lastTokVal === ')') {
+							// check middle tokens form a pmatrix structure
+							const middleTokens = tokens.slice(firstNonEmpty + 1, lastNonEmpty);
+							if (middleTokens.length === 1 && typeof middleTokens[0] !== 'string') {
+								return renderMatrixStruct(middleTokens[0]);
+							}
+							const middle = middleTokens.map(t => typeof t === 'string' ? t : renderMatrixStruct(t)).join('');
 							if (middle.startsWith('\\begin{pmatrix}')) {
 								return middle;
 							}
@@ -679,15 +708,15 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				let out = '';
 				for (let i = 0; i < tokens.length; i++) {
 					const t = tokens[i];
-					if (t && funcNames.has(t)) {
+					if (typeof t === 'string' && t && funcNames.has(t)) {
 						// find next non-empty
-						let j = i + 1; while (j < tokens.length && tokens[j] === '') { j++; }
-						if (j < tokens.length && tokens[j].startsWith('(')) {
+						let j = i + 1; while (j < tokens.length && (typeof tokens[j] === 'string' ? tokens[j] === '' : false)) { j++; }
+						if (j < tokens.length && typeof tokens[j] === 'string' && (tokens[j] as string).startsWith('(')) {
 							out += `\\${t}`;
 							continue;
 						}
 					}
-					out += t;
+					out += typeof t === 'string' ? t : renderMatrixStruct(t);
 				}
 				return out;
 			}
@@ -698,8 +727,8 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		}
 	}
 
-	// Start from the root AXNode
-	return recurseTree(root.node);
+	// Start from the root AXNode and ensure we always return a string
+	return renderMaybeMatrix(recurseTree(root.node));
 }
 
 function normalizeMathIdentifier(text: string): string {
