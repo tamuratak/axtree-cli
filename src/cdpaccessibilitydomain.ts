@@ -550,109 +550,136 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 		const role = (node.role?.value as string) || '';
 
+		// Helper to render children concatenated
+		const concatChildren = (n: AXNode) => {
+			if (!n.childIds || n.childIds.length === 0) { return ''; }
+			return n.childIds.map(id => {
+				const child = nodeMap.get(id);
+				return child ? recurseTree(child) : '';
+			}).join('');
+		};
+
 		switch (role) {
 			case 'MathMLIdentifier':
 			case 'MathMLNumber':
 			case 'StaticText':
-			case 'InlineTextBox': {
-				// If this node has children, prefer their text
-				if (node.childIds && node.childIds.length > 0) {
-					return node.childIds.map(getTextFromNodeId).join('');
-				}
-				return getTextFromNodeId(node.nodeId);
-			}
+			case 'InlineTextBox':
+				// Prefer children text if present
+				return node.childIds && node.childIds.length > 0 ? node.childIds.map(getTextFromNodeId).join('') : getTextFromNodeId(node.nodeId);
+
 			case 'MathMLOperator': {
-				// Operators can be symbols like + or names like sin, cos.
-				let text = '';
-				if (node.childIds && node.childIds.length > 0) {
-					text = node.childIds.map(getTextFromNodeId).join('');
-				} else {
-					text = getTextFromNodeId(node.nodeId);
-				}
+				const text = node.childIds && node.childIds.length > 0 ? node.childIds.map(getTextFromNodeId).join('') : getTextFromNodeId(node.nodeId);
 				const trimmed = text.trim();
-				const funcNames = new Set([
-					'sin','cos','tan','sec','csc','cot','arcsin','arccos','arctan',
-					'sinh','cosh','tanh','log','ln','exp','max','min'
-				]);
+				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
 				if (funcNames.has(trimmed)) {
 					return `\\${trimmed}`;
 				}
 				return text;
 			}
+
 			case 'MathMLSup': {
-				// children: [base, exponent]
-				const baseId = node.childIds && node.childIds[0];
-				const expId = node.childIds && node.childIds[1];
-				const base = baseId ? recurseTree(nodeMap.get(baseId) || { nodeId: '', ignored: false }) : '';
-				const exp = expId ? recurseTree(nodeMap.get(expId) || { nodeId: '', ignored: false }) : '';
-				// If exponent is single character, use caret without braces
-				if (exp.length === 1) {
-					return `${base}^${exp}`;
-				}
-				return `${base}^{${exp}}`;
+				const base = node.childIds && node.childIds[0] ? recurseTree(nodeMap.get(node.childIds[0])!) : '';
+				const exp = node.childIds && node.childIds[1] ? recurseTree(nodeMap.get(node.childIds[1])!) : '';
+				return exp.length === 1 ? `${base}^${exp}` : `${base}^{${exp}}`;
 			}
+
 			case 'MathMLSub': {
-				const baseId = node.childIds && node.childIds[0];
-				const subId = node.childIds && node.childIds[1];
-				const base = baseId ? recurseTree(nodeMap.get(baseId) || { nodeId: '', ignored: false }) : '';
-				const sub = subId ? recurseTree(nodeMap.get(subId) || { nodeId: '', ignored: false }) : '';
-				if (sub.length === 1) {
-					return `${base}_${sub}`;
-				}
-				return `${base}_{${sub}}`;
+				const base = node.childIds && node.childIds[0] ? recurseTree(nodeMap.get(node.childIds[0])!) : '';
+				const sub = node.childIds && node.childIds[1] ? recurseTree(nodeMap.get(node.childIds[1])!) : '';
+				return sub.length === 1 ? `${base}_${sub}` : `${base}_{${sub}}`;
 			}
+
 			case 'MathMLFraction':
 			case 'MathMLFrac':
 			case 'MathMLFRACTION': {
-				const numId = node.childIds && node.childIds[0];
-				const denId = node.childIds && node.childIds[1];
-				const num = numId ? recurseTree(nodeMap.get(numId) || { nodeId: '', ignored: false }) : '';
-				const den = denId ? recurseTree(nodeMap.get(denId) || { nodeId: '', ignored: false }) : '';
+				const num = node.childIds && node.childIds[0] ? recurseTree(nodeMap.get(node.childIds[0])!) : '';
+				const den = node.childIds && node.childIds[1] ? recurseTree(nodeMap.get(node.childIds[1])!) : '';
 				return `\\frac{${num}}{${den}}`;
 			}
+
 			case 'MathMLSqrt':
 			case 'MathMLRoot': {
-				const argId = node.childIds && node.childIds[0];
-				const arg = argId ? recurseTree(nodeMap.get(argId) || { nodeId: '', ignored: false }) : '';
+				const arg = node.childIds && node.childIds[0] ? recurseTree(nodeMap.get(node.childIds[0])!) : '';
 				return `\\sqrt{${arg}}`;
 			}
+
+			case 'MathMLTable': {
+				// Convert table-like structure to LaTeX pmatrix
+				const rows: string[] = [];
+				if (!node.childIds) { return ''; }
+				for (const rowId of node.childIds) {
+					const rowNode = nodeMap.get(rowId);
+					if (!rowNode) { continue; }
+					if ((rowNode.role?.value as string) === 'MathMLTableRow') {
+						const cells: string[] = [];
+						if (rowNode.childIds) {
+							for (const cellId of rowNode.childIds) {
+								const cellNode = nodeMap.get(cellId);
+								if (!cellNode) { continue; }
+								// cell content may be nested nodes
+								const cellText = cellNode.childIds && cellNode.childIds.length > 0
+									? cellNode.childIds.map(id => {
+										const n = nodeMap.get(id);
+										return n ? recurseTree(n) : '';
+									}).join('')
+									: recurseTree(cellNode);
+								cells.push(cellText);
+							}
+						}
+						rows.push(cells.join(' & '));
+					}
+				}
+				return `\\begin{pmatrix}\n${rows.join(' \\\\\n')}\n\\end{pmatrix}`;
+			}
+
 			case 'MathMLRow':
 			case 'mrow':
 			case 'MathMLMath': {
-				// Concatenate children in order, but detect function names followed by parentheses
-				if (!node.childIds || node.childIds.length === 0) { return ''; }
-				const tokens = node.childIds.map(id => {
+				// Build tokens from children
+				const tokens = node.childIds ? node.childIds.map(id => {
 					const n = nodeMap.get(id);
-					if (!n) { return ''; }
-					return recurseTree(n);
-				});
-				const funcNames = new Set(['sin','cos','tan','sec','csc','cot','arcsin','arccos','arctan','sinh','cosh','tanh','log','ln','exp','max','min']);
-				let outStr = '';
+					return n ? recurseTree(n) : '';
+				}) : [];
+
+				// If pattern is '(' + table + ')', return table without parentheses
+				const firstNonEmpty = tokens.findIndex(t => t !== '');
+				if (firstNonEmpty !== -1) {
+					// look for '(' then a pmatrix then ')'
+					if (tokens[firstNonEmpty] === '(') {
+						// find last non-empty
+						let lastNonEmpty = tokens.length - 1;
+						while (lastNonEmpty >= 0 && tokens[lastNonEmpty] === '') { lastNonEmpty--; }
+						if (lastNonEmpty > firstNonEmpty && tokens[lastNonEmpty] === ')') {
+							// check middle tokens form a pmatrix string
+							const middle = tokens.slice(firstNonEmpty + 1, lastNonEmpty).join('');
+							if (middle.startsWith('\\begin{pmatrix}')) {
+								return middle;
+							}
+						}
+					}
+				}
+
+				// otherwise, try to detect function names followed by parentheses
+				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
+				let out = '';
 				for (let i = 0; i < tokens.length; i++) {
 					const t = tokens[i];
 					if (t && funcNames.has(t)) {
-						// find next non-empty token
-						let j = i + 1;
-						while (j < tokens.length && tokens[j] === '') { j++; }
+						// find next non-empty
+						let j = i + 1; while (j < tokens.length && tokens[j] === '') { j++; }
 						if (j < tokens.length && tokens[j].startsWith('(')) {
-							outStr += `\\${t}`;
+							out += `\\${t}`;
 							continue;
 						}
 					}
-					outStr += t;
+					out += t;
 				}
-				return outStr;
+				return out;
 			}
-			default: {
-				// Fallback: try to concatenate children if present
-				if (node.childIds && node.childIds.length > 0) {
-					return node.childIds.map(id => {
-						const n = nodeMap.get(id);
-						return n ? recurseTree(n) : '';
-					}).join('');
-				}
-				return '';
-			}
+
+			default:
+				// Fallback: concatenate children
+				return concatChildren(node);
 		}
 	}
 
@@ -688,7 +715,7 @@ function normalizeMathIdentifier(text: string): string {
 	text = cleaned;
 
 	// Explicit small map for characters that may not be covered by ranges
-	const explicitMap: Record<string, string> = {	};
+	const explicitMap: Record<string, string> = {};
 
 	// Ranges of Mathematical Alphanumeric Symbols that map to A-Z / a-z
 	// Each entry: [startCodePoint, endCodePoint, isUppercaseStart:boolean]
