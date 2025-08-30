@@ -641,14 +641,29 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 					return n ? recurseTree(n) : '';
 				}) : [];
 
-				// If pattern is '(' + table + ')', return table without parentheses
+				// If pattern is a fenced matrix like '|' + pmatrix + '|' or '‖' + pmatrix + '‖', convert to vmatrix/Vmatrix
 				const firstNonEmpty = tokens.findIndex(t => t !== '');
 				if (firstNonEmpty !== -1) {
+					// find last non-empty
+					let lastNonEmpty = tokens.length - 1;
+					while (lastNonEmpty >= 0 && tokens[lastNonEmpty] === '') { lastNonEmpty--; }
+					if (lastNonEmpty > firstNonEmpty) {
+						const firstTok = tokens[firstNonEmpty];
+						const lastTok = tokens[lastNonEmpty];
+						const middle = tokens.slice(firstNonEmpty + 1, lastNonEmpty).join('');
+						if (middle.startsWith('\\begin{pmatrix}')) {
+							// single vertical bar fence -> vmatrix
+							if (firstTok === '|' && lastTok === '|') {
+								return middle.replace('{pmatrix}', '{vmatrix}').replace('\\end{pmatrix}', '\\end{vmatrix}');
+							}
+							// double vertical bar fence (either '||' or U+2016 '‖') -> Vmatrix
+							if ((firstTok === '||' || firstTok === '‖') && (lastTok === '||' || lastTok === '‖')) {
+								return middle.replace('{pmatrix}', '{Vmatrix}').replace('\\end{pmatrix}', '\\end{Vmatrix}');
+							}
+						}
+					}
 					// look for '(' then a pmatrix then ')'
 					if (tokens[firstNonEmpty] === '(') {
-						// find last non-empty
-						let lastNonEmpty = tokens.length - 1;
-						while (lastNonEmpty >= 0 && tokens[lastNonEmpty] === '') { lastNonEmpty--; }
 						if (lastNonEmpty > firstNonEmpty && tokens[lastNonEmpty] === ')') {
 							// check middle tokens form a pmatrix string
 							const middle = tokens.slice(firstNonEmpty + 1, lastNonEmpty).join('');
