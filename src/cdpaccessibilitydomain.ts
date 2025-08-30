@@ -524,7 +524,7 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 interface MatrixStruct {
 	kind: 'matrix';
 	rows: string[]; // each row like 'a & b & c'
-	env: 'matrix' |'pmatrix' | 'vmatrix' | 'Vmatrix';
+	env: 'matrix' | 'pmatrix' | 'vmatrix' | 'Vmatrix';
 }
 
 function convertMathMLNodeToLatex(root: AXNodeTree): string {
@@ -546,6 +546,18 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		visited.add(node.node.nodeId);
 
 		const role = (node.node.role?.value as string) || '';
+
+		// Helper to normalize common operator symbols to LaTeX/ASCII equivalents
+		const normalizeOperator = (s: string) => {
+			// Map some common unicode math symbols to ASCII/LaTeX
+			return s.replace(/\u2212/g, '-') // minus sign → ASCII hyphen
+				.replace(/±/g, '\\pm')
+				.replace(/×/g, '\\times')
+				.replace(/÷/g, '/')
+				.replace(/—/g, '-')
+				.replace(/–/g, '-')
+				;
+		};
 
 		const concatChildren = (n: AXNodeTree) => {
 			if (n.children.length === 0) { return ''; }
@@ -569,7 +581,10 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			case 'MathMLOperator':
 			case 'StaticText':
 			case 'InlineTextBox':
-				return node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
+				if (node.children.length > 0) {
+					return concatChildren(node);
+				}
+				return normalizeOperator(getTextFromNode(node));
 
 			case 'MathMLSup': {
 				const base = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
@@ -581,6 +596,25 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				const base = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
 				const sub = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
 				return sub.length === 1 ? `${base}_${sub}` : `${base}_{${sub}}`;
+			}
+
+			case 'MathMLFraction': {
+				// numerator then denominator
+				const num = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
+				const den = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
+				return `\\frac{${num}}{${den}}`;
+			}
+
+			case 'MathMLSquareRoot': {
+				// children form the radicand
+				const rad = node.children.map(c => renderToken(recurseTree(c))).join('');
+				return `\\sqrt{${rad}}`;
+			}
+
+			case 'MathMLRoot': {
+				const rad = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
+				const index = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
+				return `\\sqrt[${index}]{${rad}}`;
 			}
 
 			case 'MathMLTable': {
