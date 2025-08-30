@@ -535,8 +535,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	}
 
 	function renderMatrixStruct(m: MatrixStruct): string {
-		return `\\begin{${m.env}}\n${m.rows.join(' \\\\\n')}
-\\end{${m.env}}`;
+		return `\\begin{${m.env}}\n${m.rows.join(' \\\\\n')}\n\\end{${m.env}}`;
 	}
 
 	function renderMaybeMatrix(x: string | MatrixStruct): string {
@@ -568,22 +567,20 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		};
 
 		switch (role) {
-			case 'MathMLIdentifier':
-			case 'MathMLNumber':
-			case 'StaticText':
-			case 'InlineTextBox':
-				// Prefer children text if present
-				return node.children.length > 0 ? node.children.map(getTextFromNodeId).join('') : getTextFromNodeId(node);
-
-			case 'MathMLOperator': {
+			case 'MathMLIdentifier': {
 				const text = node.children.length > 0 ? node.children.map(getTextFromNodeId).join('') : getTextFromNodeId(node);
-				const trimmed = text.trim();
 				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
-				if (funcNames.has(trimmed)) {
-					return `\\${trimmed}`;
+				if (funcNames.has(text)) {
+					return `\\${text}`;
 				}
 				return text;
 			}
+
+			case 'MathMLNumber':
+			case 'MathMLOperator':
+			case 'StaticText':
+			case 'InlineTextBox':
+				return node.children.length > 0 ? node.children.map(getTextFromNodeId).join('') : getTextFromNodeId(node);
 
 			case 'MathMLSup': {
 				const base = node.children[0] ? renderMaybeMatrix(recurseTree(node.children[0])) : '';
@@ -618,14 +615,11 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				return matrix;
 			}
 
-			case 'MathMLRow':
-			case 'mrow':
-			case 'MathMLMath': {
+			case 'MathMLRow': {
 				// Build tokens from children
 				const tokens = node.children.map(child => {
 					return recurseTree(child)
 				}) satisfies (string | MatrixStruct)[];
-				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
 				let out = '';
 				for (let i = 0; i < tokens.length; i++) {
 					const t = tokens[i];
@@ -642,8 +636,6 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 								out += renderMatrixStruct(nextToken);
 							}
 							i += 2;
-						} else if (funcNames.has(t)) {
-							out += `\\${t}`;
 						} else {
 							out += t;
 						}
@@ -652,6 +644,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				return out;
 			}
 
+			case 'MathMLMath':
 			default:
 				// Fallback: concatenate children
 				return concatChildren(node);
