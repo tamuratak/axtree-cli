@@ -3,28 +3,15 @@ import { URI } from 'vscode-uri';
 import { AXNode, convertAXTreeToMarkdown } from '../src/cdpaccessibilitydomain.js';
 
 
-suite('CDP Accessibility Domain', () => {
+suite('MathML 01', () => {
 
     const testUri = URI.parse('https://example.com/test');
-    /*
-        function createAXValue(type: AXValueType, value: unknown) {
-            return { type, value };
-        }
-            */
-    /*
-        function createAXProperty(name: AXPropertyName, value: unknown, type: AXValueType = 'string'): AXProperty {
-            return {
-                name,
-                value: createAXValue(type, value)
-            };
-        }
-    */
+
     test('empty tree returns empty string', () => {
         const result = convertAXTreeToMarkdown(testUri, []);
         assert.strictEqual(result, '');
     });
 
-    //#region MathML Tests
     test('simple MathML conversion', () => {
         const nodes: AXNode[] = [
             {
