@@ -636,6 +636,26 @@ function normalizeMathIdentifier(text: string): string {
 		text = nfkc;
 	}
 
+	// Remove common invisible / zero-width characters that may appear in copy-pasted math
+	// Use a Set and for..of to safely handle Unicode codepoints (including surrogate pairs)
+	const invisibleSet = new Set([
+		'\u200B', // ZERO WIDTH SPACE
+		'\u200C', // ZERO WIDTH NON-JOINER
+		'\u200D', // ZERO WIDTH JOINER
+		'\u200E', // LEFT-TO-RIGHT MARK
+		'\u200F', // RIGHT-TO-LEFT MARK
+		'\uFEFF', // ZERO WIDTH NO-BREAK SPACE
+		'\u2060', // WORD JOINER
+		'\u2061', // FUNCTION APPLICATION
+	]);
+	let cleaned = '';
+	for (const ch of text) {
+		if (!invisibleSet.has(ch)) {
+			cleaned += ch;
+		}
+	}
+	text = cleaned;
+
 	// Explicit small map for characters that may not be covered by ranges
 	const explicitMap: Record<string, string> = {	};
 

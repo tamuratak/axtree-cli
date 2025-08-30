@@ -6,19 +6,19 @@ import { AXNode, convertAXTreeToMarkdown } from '../src/cdpaccessibilitydomain.j
 suite('CDP Accessibility Domain', () => {
 
     const testUri = URI.parse('https://example.com/test');
-/*
-    function createAXValue(type: AXValueType, value: unknown) {
-        return { type, value };
-    }
-        */
-/*
-    function createAXProperty(name: AXPropertyName, value: unknown, type: AXValueType = 'string'): AXProperty {
-        return {
-            name,
-            value: createAXValue(type, value)
-        };
-    }
-*/
+    /*
+        function createAXValue(type: AXValueType, value: unknown) {
+            return { type, value };
+        }
+            */
+    /*
+        function createAXProperty(name: AXPropertyName, value: unknown, type: AXValueType = 'string'): AXProperty {
+            return {
+                name,
+                value: createAXValue(type, value)
+            };
+        }
+    */
     test('empty tree returns empty string', () => {
         const result = convertAXTreeToMarkdown(testUri, []);
         assert.strictEqual(result, '');
@@ -498,9 +498,340 @@ suite('CDP Accessibility Domain', () => {
             }
         ]
 
-		const result = convertAXTreeToMarkdown(testUri, nodes);
-		const expected = 'ax^2+bx+c=0';
-		assert.strictEqual(result, expected);
+        const result = convertAXTreeToMarkdown(testUri, nodes);
+        const expected = 'ax^2+bx+c=0';
+        assert.strictEqual(result, expected);
     })
+
+    test('sin(x+y)', () => {
+        const nodes: AXNode[] = [
+            {
+                nodeId: '5',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLMath'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '6',
+                    '7',
+                    '8',
+                    '9',
+                    '10',
+                    '11',
+                    '12'
+                ]
+            },
+            {
+                nodeId: '6',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLIdentifier'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '13'
+                ]
+            },
+            {
+                nodeId: '7',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOperator'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '14'
+                ]
+            },
+            {
+                nodeId: '8',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOperator'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '15'
+                ]
+            },
+            {
+                nodeId: '9',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLIdentifier'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '16'
+                ]
+            },
+            {
+                nodeId: '10',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOperator'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '17'
+                ]
+            },
+            {
+                nodeId: '11',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLIdentifier'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '18'
+                ]
+            },
+            {
+                nodeId: '12',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOperator'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '19'
+                ]
+            },
+            {
+                nodeId: '13',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: 'sin'
+                },
+                childIds: [
+                    '-1000000002'
+                ]
+            },
+            {
+                nodeId: '14',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '⁡'
+                },
+                childIds: [
+                    '-1000000003'
+                ]
+            },
+            {
+                nodeId: '15',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '('
+                },
+                childIds: [
+                    '-1000000004'
+                ]
+            },
+            {
+                nodeId: '16',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑥'
+                },
+                childIds: [
+                    '-1000000005'
+                ]
+            },
+            {
+                nodeId: '17',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '+'
+                },
+                childIds: [
+                    '-1000000006'
+                ]
+            },
+            {
+                nodeId: '18',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑦'
+                },
+                childIds: [
+                    '-1000000007'
+                ]
+            },
+            {
+                nodeId: '19',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ')'
+                },
+                childIds: [
+                    '-1000000008'
+                ]
+            },
+            {
+                nodeId: '-1000000002',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: 'sin'
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000003',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '⁡'
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000004',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '('
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000005',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑥'
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000006',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '+'
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000007',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑦'
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000008',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ')'
+                },
+                childIds: []
+            }
+        ];
+
+        const result = convertAXTreeToMarkdown(testUri, nodes);
+        const expected = '\\sin(x+y)';
+        assert.strictEqual(result, expected);
+    });
     //#endregion
 });
