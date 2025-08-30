@@ -234,6 +234,15 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 				}
 			}
 			return;
+
+		case 'MathMLMath': {
+			// Convert MathML-like AXNode subtree into a LaTeX-like inline string
+			const mathStr = convertMathMLNodeToLatex(node);
+			if (mathStr) {
+				buffer.push(mathStr);
+			}
+			return;
+		}
 		case 'StaticText': {
 			const staticText = getNodeText(node.node, allowWrap);
 			if (staticText) {
@@ -509,3 +518,242 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 		collectLinks(child, links);
 	}
 }
+
+// -------------------- MathML -> LaTeX-like conversion helpers --------------------
+
+interface MatrixStruct {
+	kind: 'matrix';
+	rows: string[]; // each row like 'a & b & c'
+	env: 'pmatrix' | 'vmatrix' | 'Vmatrix';
+}
+
+function convertMathMLNodeToLatex(root: AXNodeTree): string {
+	const visited = new Set<string>();
+
+	const renderToken = (x: string | MatrixStruct): string => {
+		return typeof x === 'string' ? x : `\\begin{${x.env}}\n${x.rows.join(' \\\\\n')}\n\\end{${x.env}}`;
+	};
+
+	const getTextFromNode = (n: AXNodeTree): string => {
+		const text = (n.node.name?.value as string) || '';
+		return normalizeMathIdentifier(text);
+	}
+
+	const recurseTree = (node: AXNodeTree): string | MatrixStruct => {
+		if (!node || visited.has(node.node.nodeId)) {
+			return '';
+		}
+		visited.add(node.node.nodeId);
+
+		const role = (node.node.role?.value as string) || '';
+
+		// Helper to render children concatenated. Children may return
+		// either strings or MatrixStruct objects; renderMaybeMatrix
+		// normalizes them to strings.
+		const concatChildren = (n: AXNodeTree) => {
+			if (n.children.length === 0) { return ''; }
+			return n.children.map(child => {
+				return renderToken(recurseTree(child));
+			}).join('');
+		};
+
+		switch (role) {
+			case 'MathMLIdentifier': {
+				const text = node.children.length > 0 ? node.children.map(getTextFromNode).join('') : getTextFromNode(node);
+				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
+				if (funcNames.has(text)) {
+					return `\\${text}`;
+				} else {
+					return text;
+				}
+			}
+
+			case 'MathMLNumber':
+			case 'MathMLOperator':
+			case 'StaticText':
+			case 'InlineTextBox':
+				return node.children.length > 0 ? node.children.map(getTextFromNode).join('') : getTextFromNode(node);
+
+			case 'MathMLSup': {
+				const base = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
+				const exp = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
+				return exp.length === 1 ? `${base}^${exp}` : `${base}^{${exp}}`;
+			}
+
+			case 'MathMLSub': {
+				const base = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
+				const sub = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
+				return sub.length === 1 ? `${base}_${sub}` : `${base}_{${sub}}`;
+			}
+
+			case 'MathMLTable': {
+				// Build a structural representation of the matrix (rows)
+				const rows: string[] = [];
+				for (const child of node.children) {
+					if (child.node.role?.value === 'MathMLTableRow') {
+						const cells: string[] = [];
+						for (const cellChild of child.children) {
+							const cellText = cellChild.children.length > 0
+								? cellChild.children.map(n => {
+									return renderToken(recurseTree(n))
+								}).join('')
+								: renderToken(recurseTree(cellChild));
+							cells.push(cellText);
+						}
+						rows.push(cells.join(' & '));
+					}
+				}
+				const matrix: MatrixStruct = { kind: 'matrix', rows, env: 'pmatrix' };
+				return matrix;
+			}
+
+			case 'MathMLRow': {
+				// Build tokens from children
+				const tokens = node.children.map(child => {
+					return recurseTree(child)
+				}) satisfies (string | MatrixStruct)[];
+				let out = '';
+				for (let i = 0; i < tokens.length; i++) {
+					const t = tokens[i];
+					if (typeof t === 'string') {
+						const nextToken = tokens[i + 1];
+						if (nextToken && typeof nextToken !== 'string') {
+							if (t === '(') {
+								out += renderToken(nextToken);
+							} else if (t === '|') {
+								nextToken.env = 'vmatrix';
+								out += renderToken(nextToken);
+							} else if (t === '‖' || t === '∥') {
+								nextToken.env = 'Vmatrix';
+								out += renderToken(nextToken);
+							}
+							i += 2;
+						} else {
+							out += t;
+						}
+					}
+				}
+				return out;
+			}
+
+			case 'MathMLMath':
+			default:
+				// Fallback: concatenate children
+				return concatChildren(node);
+		}
+	}
+
+	// Start from the root AXNode and ensure we always return a string
+	return renderToken(recurseTree(root));
+}
+
+function normalizeMathIdentifier(text: string): string {
+	if (!text) { return ''; }
+
+	// Try a quick compatibility decomposition first
+	const nfkc = text.normalize('NFKC');
+	if (nfkc !== text) {
+		text = nfkc;
+	}
+
+	// Remove common invisible / zero-width characters that may appear in copy-pasted math
+	// Remove specific codepoints and the whole U+2060..U+206F block
+	const explicitInvisible = new Set([0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF]);
+	function isInvisibleChar(ch: string): boolean {
+		const cp = ch.codePointAt(0) || 0;
+		if (cp >= 0x2060 && cp <= 0x206F) {
+			return true;
+		}
+		return explicitInvisible.has(cp);
+	}
+	let cleaned = '';
+	for (const ch of text) {
+		if (!isInvisibleChar(ch)) {
+			cleaned += ch;
+		}
+	}
+	text = cleaned;
+
+	// Explicit small map for characters that may not be covered by ranges
+	const explicitMap: Record<string, string> = {};
+
+	// Ranges of Mathematical Alphanumeric Symbols that map to A-Z / a-z
+	// Each entry: [startCodePoint, endCodePoint, isUppercaseStart:boolean]
+	const ranges: { start: number; end: number; upper: boolean }[] = [
+		// Bold Capital A..Z
+		{ start: 0x1D400, end: 0x1D419, upper: true },
+		// Bold Small a..z
+		{ start: 0x1D41A, end: 0x1D433, upper: false },
+		// Italic Capital A..Z
+		{ start: 0x1D434, end: 0x1D44D, upper: true },
+		// Italic Small a..z
+		{ start: 0x1D44E, end: 0x1D467, upper: false },
+		// Bold Italic Capital A..Z
+		{ start: 0x1D468, end: 0x1D481, upper: true },
+		// Bold Italic Small a..z
+		{ start: 0x1D482, end: 0x1D49B, upper: false },
+		// Script Capital A..Z (note: there are gaps in unicode, best-effort)
+		{ start: 0x1D49C, end: 0x1D4B5, upper: true },
+		// Script Small a..z
+		{ start: 0x1D4B6, end: 0x1D4CF, upper: false },
+		// Fraktur Capital A..Z
+		{ start: 0x1D504, end: 0x1D51D, upper: true },
+		// Fraktur Small a..z
+		{ start: 0x1D51E, end: 0x1D537, upper: false },
+		// Double-struck Capital A..Z
+		{ start: 0x1D538, end: 0x1D551, upper: true },
+		// Bold Fraktur Capital A..Z
+		{ start: 0x1D56C, end: 0x1D585, upper: true },
+		// Sans-serif Capital A..Z
+		{ start: 0x1D5A0, end: 0x1D5B9, upper: true },
+		// Sans-serif Small a..z
+		{ start: 0x1D5BA, end: 0x1D5D3, upper: false },
+		// Sans-serif Bold Capital
+		{ start: 0x1D5D4, end: 0x1D5ED, upper: true },
+		// Sans-serif Bold Small
+		{ start: 0x1D5EE, end: 0x1D607, upper: false },
+		// Monospace Capital
+		{ start: 0x1D670, end: 0x1D689, upper: true },
+		// Monospace Small
+		{ start: 0x1D68A, end: 0x1D6A3, upper: false }
+	];
+
+	let out = '';
+	for (let i = 0; i < text.length; i++) {
+		const ch = text[i];
+		// handle surrogate pairs if any
+		const code = text.codePointAt(i)!;
+		if (code > 0xffff) {
+			// advance an extra index for surrogate pair
+			i++;
+		}
+
+		// explicit map first
+		if (explicitMap[ch]) {
+			out += explicitMap[ch];
+			continue;
+		}
+
+		let mapped = '';
+		for (const r of ranges) {
+			if (code >= r.start && code <= r.end) {
+				const index = code - r.start;
+				const base = r.upper ? 0x41 : 0x61; // 'A' or 'a'
+				if (index >= 0 && index < 26) {
+					mapped = String.fromCharCode(base + index);
+				}
+				break;
+			}
+		}
+
+		if (mapped) {
+			out += mapped;
+			continue;
+		}
+
+		// fallback: keep original character
+		out += String.fromCodePoint(code);
+	}
+	return out;
+}
+
