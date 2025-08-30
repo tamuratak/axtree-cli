@@ -524,7 +524,7 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 interface MatrixStruct {
 	kind: 'matrix';
 	rows: string[]; // each row like 'a & b & c'
-	env: 'pmatrix' | 'vmatrix' | 'Vmatrix';
+	env: 'matrix' |'pmatrix' | 'vmatrix' | 'Vmatrix';
 }
 
 function convertMathMLNodeToLatex(root: AXNodeTree): string {
@@ -547,9 +547,6 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 		const role = (node.node.role?.value as string) || '';
 
-		// Helper to render children concatenated. Children may return
-		// either strings or MatrixStruct objects; renderMaybeMatrix
-		// normalizes them to strings.
 		const concatChildren = (n: AXNodeTree) => {
 			if (n.children.length === 0) { return ''; }
 			return n.children.map(child => {
@@ -559,7 +556,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 		switch (role) {
 			case 'MathMLIdentifier': {
-				const text = node.children.length > 0 ? node.children.map(getTextFromNode).join('') : getTextFromNode(node);
+				const text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
 				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
 				if (funcNames.has(text)) {
 					return `\\${text}`;
@@ -572,7 +569,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			case 'MathMLOperator':
 			case 'StaticText':
 			case 'InlineTextBox':
-				return node.children.length > 0 ? node.children.map(getTextFromNode).join('') : getTextFromNode(node);
+				return node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
 
 			case 'MathMLSup': {
 				const base = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
@@ -619,18 +616,25 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 						const nextToken = tokens[i + 1];
 						if (nextToken && typeof nextToken !== 'string') {
 							if (t === '(') {
+								nextToken.env = 'pmatrix';
 								out += renderToken(nextToken);
+								i += 2;
+								continue;
 							} else if (t === '|') {
 								nextToken.env = 'vmatrix';
 								out += renderToken(nextToken);
+								i += 2;
+								continue;
 							} else if (t === '‖' || t === '∥') {
 								nextToken.env = 'Vmatrix';
 								out += renderToken(nextToken);
+								i += 2;
+								continue;
 							}
-							i += 2;
-						} else {
-							out += t;
 						}
+						out += t;
+					} else {
+						out += renderToken(t);
 					}
 				}
 				return out;
