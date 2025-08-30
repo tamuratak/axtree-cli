@@ -603,14 +603,14 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				for (const child of node.children) {
 					if ((child.node.role?.value as string) === 'MathMLTableRow') {
 						const cells: string[] = [];
-							for (const cellChild of child.children) {
-								const cellText = cellChild.children.length > 0
-									? cellChild.children.map(n => {
-										return renderMaybeMatrix(recurseTree(n))
-									}).join('')
-									: renderMaybeMatrix(recurseTree(cellChild));
-								cells.push(cellText);
-							}
+						for (const cellChild of child.children) {
+							const cellText = cellChild.children.length > 0
+								? cellChild.children.map(n => {
+									return renderMaybeMatrix(recurseTree(n))
+								}).join('')
+								: renderMaybeMatrix(recurseTree(cellChild));
+							cells.push(cellText);
+						}
 						rows.push(cells.join(' & '));
 					}
 				}
