@@ -572,8 +572,9 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
 				if (funcNames.has(text)) {
 					return `\\${text}`;
+				} else {
+					return text;
 				}
-				return text;
 			}
 
 			case 'MathMLNumber':
@@ -598,7 +599,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				// Build a structural representation of the matrix (rows)
 				const rows: string[] = [];
 				for (const child of node.children) {
-					if ((child.node.role?.value as string) === 'MathMLTableRow') {
+					if (child.node.role?.value === 'MathMLTableRow') {
 						const cells: string[] = [];
 						for (const cellChild of child.children) {
 							const cellText = cellChild.children.length > 0
@@ -624,7 +625,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				for (let i = 0; i < tokens.length; i++) {
 					const t = tokens[i];
 					if (typeof t === 'string') {
-						const nextToken = tokens[i+1];
+						const nextToken = tokens[i + 1];
 						if (nextToken && typeof nextToken !== 'string') {
 							if (t === '(') {
 								out += renderMatrixStruct(nextToken);
