@@ -637,20 +637,18 @@ function normalizeMathIdentifier(text: string): string {
 	}
 
 	// Remove common invisible / zero-width characters that may appear in copy-pasted math
-	// Use a Set and for..of to safely handle Unicode codepoints (including surrogate pairs)
-	const invisibleSet = new Set([
-		'\u200B', // ZERO WIDTH SPACE
-		'\u200C', // ZERO WIDTH NON-JOINER
-		'\u200D', // ZERO WIDTH JOINER
-		'\u200E', // LEFT-TO-RIGHT MARK
-		'\u200F', // RIGHT-TO-LEFT MARK
-		'\uFEFF', // ZERO WIDTH NO-BREAK SPACE
-		'\u2060', // WORD JOINER
-		'\u2061', // FUNCTION APPLICATION
-	]);
+	// Remove specific codepoints and the whole U+2060..U+206F block
+	const explicitInvisible = new Set([0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF]);
+	function isInvisibleChar(ch: string): boolean {
+		const cp = ch.codePointAt(0) || 0;
+		if (cp >= 0x2060 && cp <= 0x206F) {
+			return true;
+		}
+		return explicitInvisible.has(cp);
+	}
 	let cleaned = '';
 	for (const ch of text) {
-		if (!invisibleSet.has(ch)) {
+		if (!isInvisibleChar(ch)) {
 			cleaned += ch;
 		}
 	}
