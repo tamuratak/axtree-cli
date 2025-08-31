@@ -567,6 +567,10 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			env = 'vmatrix';
 		} else if (token === '‖' || token === '∥') {
 			env = 'Vmatrix';
+		} else if (token === '[') {
+			env = 'bmatrix';
+		} else if (token === '{') {
+			env = 'Bmatrix';
 		}
 		return `\\begin{${env}}\n${rows.join(' \\\\\n')}\n\\end{${env}}`;
 	};
