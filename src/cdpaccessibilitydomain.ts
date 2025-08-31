@@ -682,11 +682,22 @@ function normalizeMathIdentifier(text: string): string {
 		text = nfkc;
 	}
 	// Map some common unicode math symbols to ASCII/LaTeX
+	// Also include mappings for different glyph variants of the partial symbol
 	text = text.replace(/\u2212/g, '-') // minus sign → ASCII hyphen
 		.replace(/±/g, '\\pm')
 		.replace(/×/g, '\\times')
 		.replace(/—/g, '-')
-		.replace(/–/g, '-');
+		.replace(/–/g, '-')
+		.replace(/∂/g, '\\partial') // partial derivative
+		.replace(/𝜕/g, '\\partial') // mathematical-italic partial (U+1D715)
+		.replace(/∑/g, '\\sum')
+		.replace(/∏/g, '\\prod')
+		.replace(/∫/g, '\\int')
+		.replace(/≈/g, '\\approx')
+		.replace(/≤/g, '\\leq')
+		.replace(/≥/g, '\\geq')
+		.replace(/≠/g, '\\neq')
+		.replace(/÷/g, '\\div');
 
 	// Remove common invisible / zero-width characters that may appear in copy-pasted math
 	// Remove specific codepoints and the whole U+2060..U+206F block
