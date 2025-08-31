@@ -535,7 +535,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	};
 
 	const getTextFromNode = (n: AXNodeTree): string => {
-		const text = (n.node.name?.value as string) || '';
+		const text = typeof n.node.name?.value === 'string' ? n.node.name.value : '';
 		return normalizeMathIdentifier(text);
 	}
 
@@ -545,7 +545,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		}
 		visited.add(node.node.nodeId);
 
-		const role = (node.node.role?.value as string) || '';
+		const role = typeof node.node.role?.value === 'string' ? node.node.role.value : '';
 
 		const concatChildren = (n: AXNodeTree) => {
 			if (n.children.length === 0) { return ''; }

@@ -403,7 +403,7 @@ suite('MathML 02', () => {
         ];
 
         const result = convertAXTreeToMarkdown(testUri, nodes);
-        const expected = '\\partial_x f(x,y)';
+        const expected = '\\partial_xf(x,y)';
         assert.strictEqual(result, expected);
     });
 
