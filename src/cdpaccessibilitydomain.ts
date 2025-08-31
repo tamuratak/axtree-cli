@@ -521,16 +521,22 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 
 // -------------------- MathML -> LaTeX-like conversion helpers --------------------
 
-interface MatrixStruct {
-	kind: 'matrix';
-	rows: string[]; // each row like 'a & b & c'
+interface MtableStruct {
+	kind: 'mtable';
+	rows: string[];
 	env: 'matrix' | 'pmatrix' | 'vmatrix' | 'Vmatrix';
 }
 
 function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	const visited = new Set<string>();
 
-	const renderToken = (x: string | MatrixStruct): string => {
+
+	const renderTree = (node: AXNodeTree): string => {
+		const result = recurseTree(node);
+		return renderToken(result);
+	};
+
+	const renderToken = (x: string | MtableStruct): string => {
 		return typeof x === 'string' ? x : `\\begin{${x.env}}\n${x.rows.join(' \\\\\n')}\n\\end{${x.env}}`;
 	};
 
@@ -539,21 +545,24 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return normalizeMathIdentifier(text);
 	}
 
-	const recurseTree = (node: AXNodeTree): string | MatrixStruct => {
+	const concatChildren = (n: AXNodeTree) => {
+		if (n.children.length === 0) { return ''; }
+		return n.children.map(child => {
+			return renderTree(child);
+		}).join('');
+	};
+
+	const isMatrix = (n0: AXNodeTree, n1: AXNodeTree, n2: AXNodeTree) => {
+		return n0.node.role?.value === 'MathMLOperator' && n1.node.role?.value === 'MathMLTable' && n2.node.role?.value === 'MathMLOperator';
+	};
+
+	const recurseTree = (node: AXNodeTree): string | MtableStruct => {
 		if (!node || visited.has(node.node.nodeId)) {
 			return '';
 		}
 		visited.add(node.node.nodeId);
 
 		const role = typeof node.node.role?.value === 'string' ? node.node.role.value : '';
-
-		const concatChildren = (n: AXNodeTree) => {
-			if (n.children.length === 0) { return ''; }
-			return n.children.map(child => {
-				return renderToken(recurseTree(child));
-			}).join('');
-		};
-
 		switch (role) {
 			case 'MathMLIdentifier': {
 				const text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
@@ -575,22 +584,22 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				return getTextFromNode(node);
 
 			case 'MathMLSup': {
-				const base = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
-				const exp = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
+				const base = node.children[0] ? renderTree(node.children[0]) : '';
+				const exp = node.children[1] ? renderTree(node.children[1]) : '';
 				return exp.length === 1 ? `${base}^${exp}` : `${base}^{${exp}}`;
 			}
 
 			case 'MathMLSub': {
-				const base = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
-				const sub = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
+				const base = node.children[0] ? renderTree(node.children[0]) : '';
+				const sub = node.children[1] ? renderTree(node.children[1]) : '';
 				return sub.length === 1 ? `${base}_${sub}` : `${base}_{${sub}}`;
 			}
 
 			case 'MathMLSubSup': {
 				// Handles nodes with both subscript and superscript (e.g. limits on \int)
-				const base = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
-				const sub = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
-				const sup = node.children[2] ? renderToken(recurseTree(node.children[2])) : '';
+				const base = node.children[0] ? renderTree(node.children[0]) : '';
+				const sub = node.children[1] ? renderTree(node.children[1]) : '';
+				const sup = node.children[2] ? renderTree(node.children[2]) : '';
 				let out = base;
 				if (sub) {
 					out += sub.length === 1 ? `_${sub}` : `_{${sub}}`;
@@ -603,20 +612,20 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 			case 'MathMLFraction': {
 				// numerator then denominator
-				const num = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
-				const den = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
+				const num = node.children[0] ? renderTree(node.children[0]) : '';
+				const den = node.children[1] ? renderTree(node.children[1]) : '';
 				return `\\frac{${num}}{${den}}`;
 			}
 
 			case 'MathMLSquareRoot': {
 				// children form the radicand
-				const rad = node.children.map(c => renderToken(recurseTree(c))).join('');
+				const rad = node.children.map(c => renderTree(c)).join('');
 				return `\\sqrt{${rad}}`;
 			}
 
 			case 'MathMLRoot': {
-				const rad = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
-				const index = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
+				const rad = node.children[0] ? renderTree(node.children[0]) : '';
+				const index = node.children[1] ? renderTree(node.children[1]) : '';
 				return `\\sqrt[${index}]{${rad}}`;
 			}
 
@@ -629,49 +638,48 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 						for (const cellChild of child.children) {
 							const cellText = cellChild.children.length > 0
 								? cellChild.children.map(n => {
-									return renderToken(recurseTree(n))
+									return renderTree(n)
 								}).join('')
-								: renderToken(recurseTree(cellChild));
+								: renderTree(cellChild);
 							cells.push(cellText);
 						}
 						rows.push(cells.join(' & '));
 					}
 				}
-				const matrix: MatrixStruct = { kind: 'matrix', rows, env: 'pmatrix' };
+				const matrix: MtableStruct = { kind: 'mtable', rows, env: 'matrix' };
 				return matrix;
 			}
 
 			case 'MathMLRow': {
-				// Build tokens from children
-				const tokens = node.children.map(child => {
-					return recurseTree(child)
-				}) satisfies (string | MatrixStruct)[];
 				let out = '';
-				for (let i = 0; i < tokens.length; i++) {
-					const t = tokens[i];
-					if (typeof t === 'string') {
-						const nextToken = tokens[i + 1];
-						if (nextToken && typeof nextToken !== 'string') {
-							if (t === '(') {
+				for (let i = 0; i < node.children.length; i++) {
+					const child = node.children[i];
+					const child1 = node.children[i + 1];
+					const child2 = node.children[i + 2];
+					if (isMatrix(child, child1, child2)) {
+						const token = recurseTree(child);
+						const nextToken = recurseTree(child1);
+						if (typeof nextToken !== 'string') {
+							if (token === '(') {
 								nextToken.env = 'pmatrix';
 								out += renderToken(nextToken);
 								i += 2;
 								continue;
-							} else if (t === '|') {
+							} else if (token === '|') {
 								nextToken.env = 'vmatrix';
 								out += renderToken(nextToken);
 								i += 2;
 								continue;
-							} else if (t === '‖' || t === '∥') {
+							} else if (token === '‖' || token === '∥') {
 								nextToken.env = 'Vmatrix';
 								out += renderToken(nextToken);
 								i += 2;
 								continue;
 							}
+							out += renderToken(token);
 						}
-						out += t;
 					} else {
-						out += renderToken(t);
+						out += renderTree(child);
 					}
 				}
 				return out;
@@ -685,7 +693,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	}
 
 	// Start from the root AXNode and ensure we always return a string
-	return renderToken(recurseTree(root));
+	return renderTree(root);
 }
 
 function normalizeMathIdentifier(text: string): string {
