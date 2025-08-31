@@ -586,6 +586,21 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				return sub.length === 1 ? `${base}_${sub}` : `${base}_{${sub}}`;
 			}
 
+			case 'MathMLSubSup': {
+				// Handles nodes with both subscript and superscript (e.g. limits on \int)
+				const base = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
+				const sub = node.children[1] ? renderToken(recurseTree(node.children[1])) : '';
+				const sup = node.children[2] ? renderToken(recurseTree(node.children[2])) : '';
+				let out = base;
+				if (sub) {
+					out += sub.length === 1 ? `_${sub}` : `_{${sub}}`;
+				}
+				if (sup) {
+					out += sup.length === 1 ? `^${sup}` : `^{${sup}}`;
+				}
+				return out;
+			}
+
 			case 'MathMLFraction': {
 				// numerator then denominator
 				const num = node.children[0] ? renderToken(recurseTree(node.children[0])) : '';
