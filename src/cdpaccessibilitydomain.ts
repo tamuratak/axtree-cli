@@ -552,8 +552,24 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		}).join('');
 	};
 
-	const isMatrix = (n0: AXNodeTree, n1: AXNodeTree, n2: AXNodeTree) => {
-		return n0.node.role?.value === 'MathMLOperator' && n1.node.role?.value === 'MathMLTable' && n2.node.role?.value === 'MathMLOperator';
+	const isMatrix = (child: AXNodeTree, child1: AXNodeTree, child2: AXNodeTree) => {
+		return child.node.role?.value === 'MathMLOperator' && child1.node.role?.value === 'MathMLTable' && child2.node.role?.value === 'MathMLOperator';
+	};
+
+	const renderMatrix = (child: AXNodeTree, child1: AXNodeTree, _child2: AXNodeTree) => {
+		const token = recurseTree(child);
+		const nextToken = recurseTree(child1);
+		if (typeof nextToken !== 'string') {
+			if (token === '(') {
+				nextToken.env = 'pmatrix';
+			} else if (token === '|') {
+				nextToken.env = 'vmatrix';
+			} else if (token === '‖' || token === '∥') {
+				nextToken.env = 'Vmatrix';
+			}
+			return renderToken(nextToken);
+		}
+		throw new Error('Not a matrix');
 	};
 
 	const recurseTree = (node: AXNodeTree): string | MtableStruct => {
@@ -657,27 +673,8 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 					const child1 = node.children[i + 1];
 					const child2 = node.children[i + 2];
 					if (isMatrix(child, child1, child2)) {
-						const token = recurseTree(child);
-						const nextToken = recurseTree(child1);
-						if (typeof nextToken !== 'string') {
-							if (token === '(') {
-								nextToken.env = 'pmatrix';
-								out += renderToken(nextToken);
-								i += 2;
-								continue;
-							} else if (token === '|') {
-								nextToken.env = 'vmatrix';
-								out += renderToken(nextToken);
-								i += 2;
-								continue;
-							} else if (token === '‖' || token === '∥') {
-								nextToken.env = 'Vmatrix';
-								out += renderToken(nextToken);
-								i += 2;
-								continue;
-							}
-							out += renderToken(token);
-						}
+						out += renderMatrix(child, child1, child2);
+						i += 2;
 					} else {
 						out += renderTree(child);
 					}
