@@ -552,8 +552,8 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		}).join('');
 	};
 
-	const isMatrix = (child: AXNodeTree, child1: AXNodeTree, child2: AXNodeTree) => {
-		return child.node.role?.value === 'MathMLOperator' && child1.node.role?.value === 'MathMLTable' && child2.node.role?.value === 'MathMLOperator';
+	const isMatrix = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
+		return child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
 	};
 
 	const renderMatrix = (child: AXNodeTree, child1: AXNodeTree, _child2: AXNodeTree) => {
