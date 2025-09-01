@@ -556,7 +556,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		} else if (op.length === 1 && cl.length === 1) {
 			return { op, cl, env: 'matrix', isMatrix: true };
 		} else {
-			return {op, cl, env: 'align*', isMatrix: false };
+			return { op, cl, env: 'align*', isMatrix: false };
 		}
 	}
 
