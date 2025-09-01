@@ -689,38 +689,13 @@ function normalizeMathIdentifier(text: string): string {
 	// Map some common unicode math symbols to ASCII/LaTeX
 	// Also include mappings for different glyph variants of the partial symbol
 	text = text.replace(/\u2212/g, '-') // minus sign → ASCII hyphen
-		.replace(/±/g, '\\pm')
-		.replace(/×/g, '\\times')
 		.replace(/—/g, '-')
 		.replace(/–/g, '-')
-		.replace(/∂/g, '\\partial') // partial derivative
-		.replace(/𝜕/g, '\\partial') // mathematical-italic partial (U+1D715)
-		.replace(/∑/g, '\\sum')
-		.replace(/∏/g, '\\prod')
-		.replace(/∫/g, '\\int')
-		.replace(/≈/g, '\\approx')
-		.replace(/≤/g, '\\leq')
-		.replace(/≥/g, '\\geq')
-		.replace(/≠/g, '\\neq')
-		.replace(/÷/g, '\\div');
+		.replace(/\u{2061}/gu, '') // remove function application symbol
+		.replace(/\u{2062}/gu, '') // remove invisible times
+		.replace(/\u{2063}/gu, '') // remove invisible separator
+		.replace(/\u{2064}/gu, '') // remove invisible plus
 
-	// Remove common invisible / zero-width characters that may appear in copy-pasted math
-	// Remove specific codepoints and the whole U+2060..U+206F block
-	const explicitInvisible = new Set([0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF]);
-	const isInvisibleChar = (ch: string): boolean => {
-		const cp = ch.codePointAt(0) || 0;
-		if (cp >= 0x2060 && cp <= 0x206F) {
-			return true;
-		}
-		return explicitInvisible.has(cp);
-	}
-	let cleaned = '';
-	for (const ch of text) {
-		if (!isInvisibleChar(ch)) {
-			cleaned += ch;
-		}
-	}
-	text = cleaned;
 	return text;
 }
 

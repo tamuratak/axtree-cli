@@ -1500,7 +1500,7 @@ suite('MathML 01', () => {
             }
         ];
         const result = convertAXTreeToMarkdown(testUri, nodes);
-        const expected = 'x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}';
+        const expected = 'x=\\frac{-b±\\sqrt{b^2-4ac}}{2a}';
         assert.strictEqual(result, expected);
     });
 
