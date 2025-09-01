@@ -527,13 +527,10 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	const getTextFromNode = (n: AXNodeTree): string => {
 		const text = typeof n.node.name?.value === 'string' ? n.node.name.value : '';
 		return normalizeMathIdentifier(text);
-	}
+	};
 
 	const concatChildren = (n: AXNodeTree) => {
-		if (n.children.length === 0) { return ''; }
-		return n.children.map(child => {
-			return recurseTree(child);
-		}).join('');
+		return n.children.map(child => recurseTree(child)).join('');
 	};
 
 	const extractMatrixEnv = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
@@ -637,8 +634,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 			case 'MathMLSquareRoot': {
 				// children form the radicand
-				const rad = node.children.map(c => recurseTree(c)).join('');
-				return `\\sqrt{${rad}}`;
+				return `\\sqrt{${concatChildren(node)}}`;
 			}
 
 			case 'MathMLRoot': {
@@ -676,7 +672,6 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 			case 'MathMLMath':
 			default:
-				// Fallback: concatenate children
 				return concatChildren(node);
 		}
 	}
