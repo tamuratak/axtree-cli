@@ -536,11 +536,31 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		}).join('');
 	};
 
-	const isMatrix = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
-		return child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
-	};
+	const extractMatrixEnv = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
+		const result = child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
+		if (!result) {
+			return false;
+		}
+		const op = recurseTree(child);
+		const cl = recurseTree(child2);
+		if (op === '(' && cl === ')') {
+			return { op, cl, env: 'pmatrix', isMatrix: true };
+		} else if (op === '|' && cl === '|') {
+			return { op, cl, env: 'vmatrix', isMatrix: true };
+		} else if ((op === '‖' || op === '∥') && (cl === '‖' || cl === '∥')) {
+			return { op, cl, env: 'Vmatrix', isMatrix: true };
+		} else if (op === '[' && cl === ']') {
+			return { op, cl, env: 'bmatrix', isMatrix: true };
+		} else if (op === '{' && cl === '}') {
+			return { op, cl, env: 'Bmatrix', isMatrix: true };
+		} else if (op.length === 1 && cl.length === 1) {
+			return { op, cl, env: 'matrix', isMatrix: true };
+		} else {
+			return {op, cl, env: 'align*', isMatrix: false };
+		}
+	}
 
-	const renderMatrix = (child: AXNodeTree, child1: AXNodeTree, _child2: AXNodeTree) => {
+	const renderMatrix = (child1: AXNodeTree, env: string) => {
 		if (child1.node.role?.value !== 'MathMLTable') {
 			throw new Error('Not a matrix');
 		}
@@ -550,19 +570,6 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				const cells = ch.children.map(cellChild => recurseTree(cellChild));
 				rows.push(cells.join(' & '));
 			}
-		}
-		const token = recurseTree(child);
-		let env = 'matrix';
-		if (token === '(') {
-			env = 'pmatrix';
-		} else if (token === '|') {
-			env = 'vmatrix';
-		} else if (token === '‖' || token === '∥') {
-			env = 'Vmatrix';
-		} else if (token === '[') {
-			env = 'bmatrix';
-		} else if (token === '{') {
-			env = 'Bmatrix';
 		}
 		return `\\begin{${env}}\n${rows.join(' \\\\\n')}\n\\end{${env}}`;
 	};
@@ -650,8 +657,15 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 					const child = node.children[i];
 					const child1 = node.children[i + 1];
 					const child2 = node.children[i + 2];
-					if (isMatrix(child, child1, child2)) {
-						out += renderMatrix(child, child1, child2);
+					const envResult = extractMatrixEnv(child, child1, child2);
+					if (envResult) {
+						if (envResult.isMatrix) {
+							out += renderMatrix(child1, envResult.env);
+						} else {
+							out += envResult.op;
+							out += recurseTree(child1);
+							out += envResult.cl;
+						}
 						i += 2;
 					} else {
 						out += recurseTree(child);
