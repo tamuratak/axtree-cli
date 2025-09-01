@@ -522,7 +522,7 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 // -------------------- MathML -> LaTeX-like conversion helpers --------------------
 
 function convertMathMLNodeToLatex(root: AXNodeTree): string {
-	const visited = new Set<AXNodeTree>();
+	const visited = new Set<string>();
 
 	const getTextFromNode = (n: AXNodeTree): string => {
 		const text = typeof n.node.name?.value === 'string' ? n.node.name.value : '';
@@ -572,10 +572,10 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	};
 
 	const recurseTree = (node: AXNodeTree | undefined): string => {
-		if (!node || visited.has(node)) {
+		if (!node || visited.has(node.node.nodeId)) {
 			return '';
 		}
-		visited.add(node);
+		visited.add(node.node.nodeId);
 
 		const role = typeof node.node.role?.value === 'string' ? node.node.role.value : '';
 		switch (role) {
