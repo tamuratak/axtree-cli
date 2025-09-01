@@ -617,6 +617,9 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
 				if (funcNames.has(text)) {
 					return `\\${text}`;
+				} else if (text.length > 1) {
+					return `\\operatorname{${text}}`;
+
 				} else {
 					return text;
 				}
