@@ -239,12 +239,19 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			// Convert MathML-like AXNode subtree into a LaTeX-like inline string
 			const mathStr = convertMathMLNodeToLatex(node);
 			if (mathStr) {
-				if (buffer.length > 0 && buffer[buffer.length - 1].endsWith('\n\n')) {
+				const lastBuffer = buffer.length > 0 ? buffer[buffer.length - 1] : undefined;
+				if (lastBuffer?.endsWith('\n\n')) {
 					// If we are at the start of a new paragraph, use display math
-					buffer.push('$$\n' + mathStr + '\n$$');
+					buffer.push(`$$\n${mathStr}\n$$`);
+				} else if (mathStr.startsWith('\\begin')) {
+					buffer.push(`\n$$\n${mathStr}\n$$`);
 				} else {
 					// Otherwise, use inline math
-					buffer.push('$' + mathStr + '$');
+					if (lastBuffer && !lastBuffer.endsWith(' ')) {
+						buffer.push(' ');
+					}
+					buffer.push(`$${mathStr}$`);
+					buffer.push(' ');
 				}
 			}
 			return;
