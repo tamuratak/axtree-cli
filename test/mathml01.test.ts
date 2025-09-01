@@ -486,7 +486,7 @@ suite('MathML 01', () => {
         ]
 
         const result = convertAXTreeToMarkdown(testUri, nodes);
-        const expected = 'ax^2+bx+c=0';
+        const expected = '$ax^2+bx+c=0$';
         assert.strictEqual(result, expected);
     })
 
@@ -817,7 +817,7 @@ suite('MathML 01', () => {
         ];
 
         const result = convertAXTreeToMarkdown(testUri, nodes);
-        const expected = '\\sin(x+y)';
+        const expected = '$\\sin(x+y)$';
         assert.strictEqual(result, expected);
     });
     test('quadratic formula', () => {
@@ -1500,7 +1500,7 @@ suite('MathML 01', () => {
             }
         ];
         const result = convertAXTreeToMarkdown(testUri, nodes);
-        const expected = 'x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}';
+        const expected = '$x=\\frac{-b±\\sqrt{b^2-4ac}}{2a}$';
         assert.strictEqual(result, expected);
     });
 
@@ -1907,10 +1907,10 @@ suite('MathML 01', () => {
         ];
 
         const result = convertAXTreeToMarkdown(testUri, nodes);
-        const expected = `\\begin{pmatrix}
+        const expected = `$\\begin{pmatrix}
 1 & 2 \\\\
 3 & 4
-\\end{pmatrix}`;
+\\end{pmatrix}$`;
         assert.strictEqual(result, expected);
     });
     test('vmatrix', () => {
@@ -2315,10 +2315,10 @@ suite('MathML 01', () => {
             }
         ];
         const result = convertAXTreeToMarkdown(testUri, nodes);
-        const expected = `\\begin{vmatrix}
+        const expected = `$\\begin{vmatrix}
 1 & 2 \\\\
 3 & 4
-\\end{vmatrix}`;
+\\end{vmatrix}$`;
         assert.strictEqual(result, expected);
     });
     //#endregion

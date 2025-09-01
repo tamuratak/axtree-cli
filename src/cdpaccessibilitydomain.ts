@@ -239,7 +239,13 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			// Convert MathML-like AXNode subtree into a LaTeX-like inline string
 			const mathStr = convertMathMLNodeToLatex(node);
 			if (mathStr) {
-				buffer.push(mathStr);
+				if (buffer.length > 0 && buffer[buffer.length - 1].endsWith('\n\n')) {
+					// If we are at the start of a new paragraph, use display math
+					buffer.push('$$\n' + mathStr + '\n$$');
+				} else {
+					// Otherwise, use inline math
+					buffer.push('$' + mathStr + '$');
+				}
 			}
 			return;
 		}
@@ -519,63 +525,70 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 	}
 }
 
-// -------------------- MathML -> LaTeX-like conversion helpers --------------------
-
 function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	const visited = new Set<string>();
+
+	const normalizeMathIdentifier = (text: string): string => {
+		if (text === '') {
+			return text;
+		}
+		text = text.normalize('NFKC');
+		text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
+			.replace(/\u{2061}/gu, '') // remove invisible function application symbol
+			.replace(/\u{2062}/gu, '') // remove invisible times
+			.replace(/\u{2063}/gu, '') // remove invisible separator
+			.replace(/\u{2064}/gu, ''); // remove invisible plus
+		return text;
+	}
 
 	const getTextFromNode = (n: AXNodeTree): string => {
 		const text = typeof n.node.name?.value === 'string' ? n.node.name.value : '';
 		return normalizeMathIdentifier(text);
-	}
+	};
 
 	const concatChildren = (n: AXNodeTree) => {
-		if (n.children.length === 0) { return ''; }
-		return n.children.map(child => {
-			return recurseTree(child);
-		}).join('');
+		return n.children.map(child => recurseTree(child)).join('');
 	};
 
-	const isMatrix = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
-		return child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
-	};
+	const extractMatrixEnv = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
+		const result = child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
+		if (!result) {
+			return false;
+		}
+		const op = recurseTree(child);
+		const cl = recurseTree(child2);
+		if (op === '(' && cl === ')') {
+			return { op, cl, env: 'pmatrix', isMatrix: true };
+		} else if (op === '|' && cl === '|') {
+			return { op, cl, env: 'vmatrix', isMatrix: true };
+		} else if ((op === '‖' || op === '∥') && (cl === '‖' || cl === '∥')) {
+			return { op, cl, env: 'Vmatrix', isMatrix: true };
+		} else if (op === '[' && cl === ']') {
+			return { op, cl, env: 'bmatrix', isMatrix: true };
+		} else if (op === '{' && cl === '}') {
+			return { op, cl, env: 'Bmatrix', isMatrix: true };
+		} else if (op.length === 1 && cl.length === 1) {
+			return { op, cl, env: 'matrix', isMatrix: true };
+		} else {
+			return { op, cl, env: 'align*', isMatrix: false };
+		}
+	}
 
-	const renderMatrix = (child: AXNodeTree, child1: AXNodeTree, _child2: AXNodeTree) => {
+	const renderMatrix = (child1: AXNodeTree, env: string) => {
 		if (child1.node.role?.value !== 'MathMLTable') {
 			throw new Error('Not a matrix');
 		}
 		const rows: string[] = [];
 		for (const ch of child1.children) {
 			if (ch.node.role?.value === 'MathMLTableRow') {
-				const cells: string[] = [];
-				for (const cellChild of ch.children) {
-					const cellText = cellChild.children.length > 0
-						? cellChild.children.map(n => {
-							return recurseTree(n)
-						}).join('')
-						: recurseTree(cellChild);
-					cells.push(cellText);
-				}
+				const cells = ch.children.map(cellChild => recurseTree(cellChild));
 				rows.push(cells.join(' & '));
 			}
-		}
-		const token = recurseTree(child);
-		let env = 'matrix';
-		if (token === '(') {
-			env = 'pmatrix';
-		} else if (token === '|') {
-			env = 'vmatrix';
-		} else if (token === '‖' || token === '∥') {
-			env = 'Vmatrix';
-		} else if (token === '[') {
-			env = 'bmatrix';
-		} else if (token === '{') {
-			env = 'Bmatrix';
 		}
 		return `\\begin{${env}}\n${rows.join(' \\\\\n')}\n\\end{${env}}`;
 	};
 
-	const recurseTree = (node: AXNodeTree): string => {
+	const recurseTree = (node: AXNodeTree | undefined): string => {
 		if (!node || visited.has(node.node.nodeId)) {
 			return '';
 		}
@@ -638,8 +651,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 			case 'MathMLSquareRoot': {
 				// children form the radicand
-				const rad = node.children.map(c => recurseTree(c)).join('');
-				return `\\sqrt{${rad}}`;
+				return `\\sqrt{${concatChildren(node)}}`;
 			}
 
 			case 'MathMLRoot': {
@@ -649,7 +661,13 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			}
 
 			case 'MathMLTable': {
-				throw new Error('not implemented MathMLTable');
+				const rows: string[] = [];
+				for (const ch of node.children) {
+					if (ch.node.role?.value === 'MathMLTableRow') {
+						rows.push(concatChildren(ch));
+					}
+				}
+				return `\\begin{align*}\n${rows.join(' \\\\\n')}\n\\end{align*}`;
 			}
 
 			case 'MathMLRow': {
@@ -658,8 +676,15 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 					const child = node.children[i];
 					const child1 = node.children[i + 1];
 					const child2 = node.children[i + 2];
-					if (isMatrix(child, child1, child2)) {
-						out += renderMatrix(child, child1, child2);
+					const envResult = extractMatrixEnv(child, child1, child2);
+					if (envResult) {
+						if (envResult.isMatrix) {
+							out += renderMatrix(child1, envResult.env);
+						} else {
+							out += envResult.op;
+							out += recurseTree(child1);
+							out += envResult.cl;
+						}
 						i += 2;
 					} else {
 						out += recurseTree(child);
@@ -670,139 +695,9 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 			case 'MathMLMath':
 			default:
-				// Fallback: concatenate children
 				return concatChildren(node);
 		}
 	}
 
-	// Start from the root AXNode and ensure we always return a string
 	return recurseTree(root);
 }
-
-function normalizeMathIdentifier(text: string): string {
-	if (!text) { return ''; }
-
-	// Try a quick compatibility decomposition first
-	const nfkc = text.normalize('NFKC');
-	if (nfkc !== text) {
-		text = nfkc;
-	}
-	// Map some common unicode math symbols to ASCII/LaTeX
-	// Also include mappings for different glyph variants of the partial symbol
-	text = text.replace(/\u2212/g, '-') // minus sign → ASCII hyphen
-		.replace(/±/g, '\\pm')
-		.replace(/×/g, '\\times')
-		.replace(/—/g, '-')
-		.replace(/–/g, '-')
-		.replace(/∂/g, '\\partial') // partial derivative
-		.replace(/𝜕/g, '\\partial') // mathematical-italic partial (U+1D715)
-		.replace(/∑/g, '\\sum')
-		.replace(/∏/g, '\\prod')
-		.replace(/∫/g, '\\int')
-		.replace(/≈/g, '\\approx')
-		.replace(/≤/g, '\\leq')
-		.replace(/≥/g, '\\geq')
-		.replace(/≠/g, '\\neq')
-		.replace(/÷/g, '\\div');
-
-	// Remove common invisible / zero-width characters that may appear in copy-pasted math
-	// Remove specific codepoints and the whole U+2060..U+206F block
-	const explicitInvisible = new Set([0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF]);
-	const isInvisibleChar = (ch: string): boolean => {
-		const cp = ch.codePointAt(0) || 0;
-		if (cp >= 0x2060 && cp <= 0x206F) {
-			return true;
-		}
-		return explicitInvisible.has(cp);
-	}
-	let cleaned = '';
-	for (const ch of text) {
-		if (!isInvisibleChar(ch)) {
-			cleaned += ch;
-		}
-	}
-	text = cleaned;
-
-	// Explicit small map for characters that may not be covered by ranges
-	const explicitMap: Record<string, string> = {};
-
-	// Ranges of Mathematical Alphanumeric Symbols that map to A-Z / a-z
-	// Each entry: [startCodePoint, endCodePoint, isUppercaseStart:boolean]
-	const ranges: { start: number; end: number; upper: boolean }[] = [
-		// Bold Capital A..Z
-		{ start: 0x1D400, end: 0x1D419, upper: true },
-		// Bold Small a..z
-		{ start: 0x1D41A, end: 0x1D433, upper: false },
-		// Italic Capital A..Z
-		{ start: 0x1D434, end: 0x1D44D, upper: true },
-		// Italic Small a..z
-		{ start: 0x1D44E, end: 0x1D467, upper: false },
-		// Bold Italic Capital A..Z
-		{ start: 0x1D468, end: 0x1D481, upper: true },
-		// Bold Italic Small a..z
-		{ start: 0x1D482, end: 0x1D49B, upper: false },
-		// Script Capital A..Z (note: there are gaps in unicode, best-effort)
-		{ start: 0x1D49C, end: 0x1D4B5, upper: true },
-		// Script Small a..z
-		{ start: 0x1D4B6, end: 0x1D4CF, upper: false },
-		// Fraktur Capital A..Z
-		{ start: 0x1D504, end: 0x1D51D, upper: true },
-		// Fraktur Small a..z
-		{ start: 0x1D51E, end: 0x1D537, upper: false },
-		// Double-struck Capital A..Z
-		{ start: 0x1D538, end: 0x1D551, upper: true },
-		// Bold Fraktur Capital A..Z
-		{ start: 0x1D56C, end: 0x1D585, upper: true },
-		// Sans-serif Capital A..Z
-		{ start: 0x1D5A0, end: 0x1D5B9, upper: true },
-		// Sans-serif Small a..z
-		{ start: 0x1D5BA, end: 0x1D5D3, upper: false },
-		// Sans-serif Bold Capital
-		{ start: 0x1D5D4, end: 0x1D5ED, upper: true },
-		// Sans-serif Bold Small
-		{ start: 0x1D5EE, end: 0x1D607, upper: false },
-		// Monospace Capital
-		{ start: 0x1D670, end: 0x1D689, upper: true },
-		// Monospace Small
-		{ start: 0x1D68A, end: 0x1D6A3, upper: false }
-	];
-
-	let out = '';
-	for (let i = 0; i < text.length; i++) {
-		const ch = text[i];
-		// handle surrogate pairs if any
-		const code = text.codePointAt(i)!;
-		if (code > 0xffff) {
-			// advance an extra index for surrogate pair
-			i++;
-		}
-
-		// explicit map first
-		if (explicitMap[ch]) {
-			out += explicitMap[ch];
-			continue;
-		}
-
-		let mapped = '';
-		for (const r of ranges) {
-			if (code >= r.start && code <= r.end) {
-				const index = code - r.start;
-				const base = r.upper ? 0x41 : 0x61; // 'A' or 'a'
-				if (index >= 0 && index < 26) {
-					mapped = String.fromCharCode(base + index);
-				}
-				break;
-			}
-		}
-
-		if (mapped) {
-			out += mapped;
-			continue;
-		}
-
-		// fallback: keep original character
-		out += String.fromCodePoint(code);
-	}
-	return out;
-}
-
