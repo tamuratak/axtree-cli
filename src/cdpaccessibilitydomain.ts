@@ -685,9 +685,7 @@ function normalizeMathIdentifier(text: string): string {
 		return text;
 	}
 	text = text.normalize('NFKC');
-	text = text.replace(/\u2212/g, '-') // minus sign → ASCII hyphen
-		.replace(/—/g, '-')
-		.replace(/–/g, '-')
+	text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
 		.replace(/\u{2061}/gu, '') // remove function application symbol
 		.replace(/\u{2062}/gu, '') // remove invisible times
 		.replace(/\u{2063}/gu, '') // remove invisible separator
