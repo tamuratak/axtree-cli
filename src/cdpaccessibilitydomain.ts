@@ -239,7 +239,7 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			// Convert MathML-like AXNode subtree into a LaTeX-like inline string
 			const mathStr = convertMathMLNodeToLatex(node);
 			if (mathStr) {
-				if (buffer[buffer.length - 1].endsWith('\n\n')) {
+				if (buffer[buffer.length - 1]?.endsWith('\n\n')) {
 					// If we are at the start of a new paragraph, use display math
 					buffer.push('$$\n' + mathStr + '\n$$');
 				} else {
@@ -664,8 +664,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				const rows: string[] = [];
 				for (const ch of node.children) {
 					if (ch.node.role?.value === 'MathMLTableRow') {
-						const cells = ch.children.map(cellChild => recurseTree(cellChild));
-						rows.push(cells.join(' & '));
+						rows.push(concatChildren(ch));
 					}
 				}
 				return `\\begin{align*}\n${rows.join(' \\\\\n')}\n\\end{align*}`;

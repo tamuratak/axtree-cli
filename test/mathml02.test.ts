@@ -403,7 +403,7 @@ suite('MathML 02', () => {
         ];
 
         const result = convertAXTreeToMarkdown(testUri, nodes);
-        const expected = '∂_xf(x,y)';
+        const expected = '$∂_xf(x,y)$';
         assert.strictEqual(result, expected);
     });
 
@@ -851,7 +851,7 @@ suite('MathML 02', () => {
         ];
 
         const result = convertAXTreeToMarkdown(testUri, nodes);
-        const expected = '∫_a^bf(x)dx';
+        const expected = '$∫_a^bf(x)dx$';
         assert.strictEqual(result, expected);
     });
 });
