@@ -550,6 +550,15 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return n.children.map(child => recurseTree(child)).join('');
 	};
 
+	const getBaseString = (n: AXNodeTree): string => {
+		const base = recurseTree(n);
+		if (base.length === 1 || /^\\[a-zA-Z]+$/.test(base)) {
+			return base;
+		} else {
+			return `{${base}}`;
+		}
+	};
+
 	const extractMatrixEnv = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
 		const result = child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
 		if (!result) {
@@ -606,6 +615,11 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				}
 			}
 
+			case 'MathMLText': {
+				const text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
+				return `\\text{${text}}`;
+			}
+
 			case 'MathMLNumber':
 			case 'MathMLOperator':
 			case 'StaticText':
@@ -616,20 +630,20 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				return getTextFromNode(node);
 
 			case 'MathMLSup': {
-				const base = node.children[0] ? recurseTree(node.children[0]) : '';
+				const base = getBaseString(node.children[0]);
 				const exp = node.children[1] ? recurseTree(node.children[1]) : '';
 				return exp.length === 1 ? `${base}^${exp}` : `${base}^{${exp}}`;
 			}
 
 			case 'MathMLSub': {
-				const base = node.children[0] ? recurseTree(node.children[0]) : '';
+				const base = getBaseString(node.children[0]);
 				const sub = node.children[1] ? recurseTree(node.children[1]) : '';
 				return sub.length === 1 ? `${base}_${sub}` : `${base}_{${sub}}`;
 			}
 
 			case 'MathMLSubSup': {
 				// Handles nodes with both subscript and superscript (e.g. limits on \int)
-				const base = node.children[0] ? recurseTree(node.children[0]) : '';
+				const base = getBaseString(node.children[0]);
 				const sub = node.children[1] ? recurseTree(node.children[1]) : '';
 				const sup = node.children[2] ? recurseTree(node.children[2]) : '';
 				let out = base;
