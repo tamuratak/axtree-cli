@@ -681,21 +681,17 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 }
 
 function normalizeMathIdentifier(text: string): string {
-	if (!text) { return ''; }
-
-	// Try a quick compatibility decomposition first
+	if (text === '') {
+		return text;
+	}
 	text = text.normalize('NFKC');
-
-	// Map some common unicode math symbols to ASCII/LaTeX
-	// Also include mappings for different glyph variants of the partial symbol
 	text = text.replace(/\u2212/g, '-') // minus sign → ASCII hyphen
 		.replace(/—/g, '-')
 		.replace(/–/g, '-')
 		.replace(/\u{2061}/gu, '') // remove function application symbol
 		.replace(/\u{2062}/gu, '') // remove invisible times
 		.replace(/\u{2063}/gu, '') // remove invisible separator
-		.replace(/\u{2064}/gu, '') // remove invisible plus
-
+		.replace(/\u{2064}/gu, ''); // remove invisible plus
 	return text;
 }
 
