@@ -575,7 +575,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return `\\begin{${env}}\n${rows.join(' \\\\\n')}\n\\end{${env}}`;
 	};
 
-	const recurseTree = (node: AXNodeTree): string => {
+	const recurseTree = (node: AXNodeTree | undefined): string => {
 		if (!node || visited.has(node.node.nodeId)) {
 			return '';
 		}
