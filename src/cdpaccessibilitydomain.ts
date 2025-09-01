@@ -519,8 +519,6 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 	}
 }
 
-// -------------------- MathML -> LaTeX-like conversion helpers --------------------
-
 function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	const visited = new Set<string>();
 
