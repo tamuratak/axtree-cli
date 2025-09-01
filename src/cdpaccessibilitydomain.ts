@@ -633,11 +633,33 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			case 'MathMLNumber':
 			case 'MathMLOperator':
 			case 'StaticText':
-			case 'InlineTextBox':
+			case 'InlineTextBox': {
 				if (node.children.length > 0) {
 					return concatChildren(node);
 				}
 				return getTextFromNode(node);
+			}
+
+			case 'MathMLOver': {
+				const base = node.children[0] ? recurseTree(node.children[0]) : '';
+				const cmd = node.children[1] ? recurseTree(node.children[1]) : '';
+				const accentMap: Record<string, string> = {
+					'\u{af}': 'bar',
+					'\u{2d8}': 'breve',
+					'\u{2d9}': 'dot',
+					'\u{a8}': 'ddot',
+					'\u{20}\u{308}': 'ddot',
+					'^': 'hat',
+					'\u{2c7}': 'check',
+					'~': 'tilde',
+					'\u{2015}': 'overline',
+					'`': 'grave',
+					'\u{b4}': 'acute',
+					'\u{2192}': 'vec' // right arrow
+				};
+				const texCmd = accentMap[cmd];
+				return `\\${texCmd}{${base}}`;
+			}
 
 			case 'MathMLSup': {
 				const base = getBaseString(node.children[0]);
