@@ -524,6 +524,19 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	const visited = new Set<string>();
 
+	const normalizeMathIdentifier = (text: string): string => {
+		if (text === '') {
+			return text;
+		}
+		text = text.normalize('NFKC');
+		text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
+			.replace(/\u{2061}/gu, '') // remove invisible function application symbol
+			.replace(/\u{2062}/gu, '') // remove invisible times
+			.replace(/\u{2063}/gu, '') // remove invisible separator
+			.replace(/\u{2064}/gu, ''); // remove invisible plus
+		return text;
+	}
+
 	const getTextFromNode = (n: AXNodeTree): string => {
 		const text = typeof n.node.name?.value === 'string' ? n.node.name.value : '';
 		return normalizeMathIdentifier(text);
@@ -676,20 +689,5 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		}
 	}
 
-	// Start from the root AXNode and ensure we always return a string
 	return recurseTree(root);
 }
-
-function normalizeMathIdentifier(text: string): string {
-	if (text === '') {
-		return text;
-	}
-	text = text.normalize('NFKC');
-	text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
-		.replace(/\u{2061}/gu, '') // remove function application symbol
-		.replace(/\u{2062}/gu, '') // remove invisible times
-		.replace(/\u{2063}/gu, '') // remove invisible separator
-		.replace(/\u{2064}/gu, ''); // remove invisible plus
-	return text;
-}
-
