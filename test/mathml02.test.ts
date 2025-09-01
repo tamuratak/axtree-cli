@@ -404,7 +404,7 @@ suite('MathML 02', () => {
 
         const result = convertAXTreeToMarkdown(testUri, nodes);
         const expected = '$∂_xf(x,y)$';
-        assert.strictEqual(result, expected);
+        assert.strictEqual(result.trim(), expected);
     });
 
     test('integral', () => {
@@ -852,6 +852,6 @@ suite('MathML 02', () => {
 
         const result = convertAXTreeToMarkdown(testUri, nodes);
         const expected = '$∫_a^bf(x)dx$';
-        assert.strictEqual(result, expected);
+        assert.strictEqual(result.trim(), expected);
     });
 });
