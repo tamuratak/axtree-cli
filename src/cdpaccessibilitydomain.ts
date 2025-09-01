@@ -547,15 +547,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		const rows: string[] = [];
 		for (const ch of child1.children) {
 			if (ch.node.role?.value === 'MathMLTableRow') {
-				const cells: string[] = [];
-				for (const cellChild of ch.children) {
-					const cellText = cellChild.children.length > 0
-						? cellChild.children.map(n => {
-							return recurseTree(n)
-						}).join('')
-						: recurseTree(cellChild);
-					cells.push(cellText);
-				}
+				const cells = ch.children.map(cellChild => recurseTree(cellChild));
 				rows.push(cells.join(' & '));
 			}
 		}
