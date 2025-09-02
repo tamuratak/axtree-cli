@@ -645,6 +645,8 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 					return `\\${text}`;
 				} else if (text.length > 1) {
 					return `\\operatorname{${text}}`;
+				} else if (text === '#') {
+					return '\\#';
 				} else {
 					return text;
 				}
