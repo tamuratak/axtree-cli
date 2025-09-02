@@ -646,28 +646,48 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				cmd = cmd.trim();
 				const accentMap: Record<string, string> = {
 					'\u{af}': 'bar',
-					'\u{2d8}': 'breve',
-					'\u{2d9}': 'dot',
 					'\u{a8}': 'ddot',
-					'\u{308}': 'ddot',
 					'\u{20db}': 'dddot',
 					'^': 'hat',
-					'\u{2c7}': 'check',
 					'~': 'tilde',
 					'\u{2015}': 'overline',
 					'`': 'grave',
 					'\u{b4}': 'acute',
-					'\u{2192}': 'vec' // right arrow
+					'\u{2192}': 'vec', // right arrow
+					'\u{2c6}': 'hat',
+					'\u{2c7}': 'check',
+					'\u{2c9}': 'bar',
+					'\u{2ca}': 'acute',
+					'\u{2cb}': 'grave',
+					'\u{2d8}': 'breve',
+					'\u{2d9}': 'dot',
+					'\u{2da}': 'ring',
+					'\u{2dc}': 'tilde',
+					'\u{300}': 'grave',
+					'\u{301}': 'acute',
+					'\u{302}': 'hat',
+					'\u{303}': 'tilde',
+					'\u{304}': 'bar',
+					'\u{305}': 'bar',
+					'\u{306}': 'breve',
+					'\u{307}': 'dot',
+					'\u{308}': 'ddot',
+					'\u{30a}': 'ring',
+					'\u{30c}': 'check'
 				};
-				if (cmd === 'hat' && base.length > 1) {
-					cmd = 'widehat';
-				} else if (cmd === 'check' && base.length > 1) {
-					cmd = 'widecheck';
-				} else if (cmd === 'tilde' && base.length > 1) {
-					cmd = 'widetilde';
+				let texCmd = accentMap[cmd];
+				if (texCmd) {
+					if (texCmd === 'hat' && base.length > 1) {
+						texCmd = 'widehat';
+					} else if (texCmd === 'check' && base.length > 1) {
+						texCmd = 'widecheck';
+					} else if (texCmd === 'tilde' && base.length > 1) {
+						texCmd = 'widetilde';
+					}
+					return `\\${texCmd}{${base}}`;
+				} else {
+					return /^[a-zA-Z0-9]$/.test(cmd) ? `${base}^${cmd}` : `${base}^{${cmd}}`;
 				}
-				const texCmd = accentMap[cmd];
-				return `\\${texCmd}{${base}}`;
 			}
 
 			case 'MathMLSup': {
@@ -676,12 +696,14 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				return exp.length === 1 ? `${base}^${exp}` : `${base}^{${exp}}`;
 			}
 
+			case 'MathMLUnder':
 			case 'MathMLSub': {
 				const base = getBaseString(node.children[0]);
 				const sub = node.children[1] ? recurseTree(node.children[1]) : '';
 				return sub.length === 1 ? `${base}_${sub}` : `${base}_{${sub}}`;
 			}
 
+			case 'MathMLUnderOver':
 			case 'MathMLSubSup': {
 				// Handles nodes with both subscript and superscript (e.g. limits on \int)
 				const base = getBaseString(node.children[0]);
