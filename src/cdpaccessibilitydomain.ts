@@ -541,10 +541,12 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		}
 		text = text.normalize('NFKC');
 		text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
-			.replace(/\u{2061}/gu, '') // remove invisible function application symbol
-			.replace(/\u{2062}/gu, '') // remove invisible times
-			.replace(/\u{2063}/gu, '') // remove invisible separator
-			.replace(/\u{2064}/gu, ''); // remove invisible plus
+			.replace(/[\u{2061}\u{2062}\u{2063}\u{2064}]/gu, '')
+			// remove the follwoing
+			// - invisible function application symbol
+			// - invisible times
+			// - invisible separator
+			// - invisible plus
 		return text;
 	}
 
@@ -601,7 +603,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			return { op, cl, env: 'pmatrix', isMatrix: true };
 		} else if (op === '|' && cl === '|') {
 			return { op, cl, env: 'vmatrix', isMatrix: true };
-		} else if ((op === '‖' || op === '∥') && (cl === '‖' || cl === '∥')) {
+		} else if ((op === '\u{2016}' || op === '\u{2225}') && (cl === '\u{2016}' || cl === '\u{2225}')) {
 			return { op, cl, env: 'Vmatrix', isMatrix: true };
 		} else if (op === '[' && cl === ']') {
 			return { op, cl, env: 'bmatrix', isMatrix: true };
