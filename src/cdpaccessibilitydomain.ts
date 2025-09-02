@@ -605,7 +605,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 	const renderMatrix = (child1: AXNodeTree, env: string) => {
 		if (child1.node.role?.value !== 'MathMLTable') {
-			throw new Error('Not a matrix');
+			return '';
 		}
 		const rows: string[] = [];
 		for (const ch of child1.children) {
