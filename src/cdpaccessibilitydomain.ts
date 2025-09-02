@@ -625,8 +625,10 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 		const role = typeof node.node.role?.value === 'string' ? node.node.role.value : '';
 		switch (role) {
+			case 'MathMLOperator':
 			case 'MathMLIdentifier': {
-				const text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
+				let text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
+				text = text.trim();
 				const opNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'argmax', 'argmin']);
 				if (opNames.has(text)) {
 					return `\\${text}`;
@@ -644,7 +646,6 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			}
 
 			case 'MathMLNumber':
-			case 'MathMLOperator':
 			case 'StaticText':
 			case 'InlineTextBox': {
 				if (node.children.length > 0) {
