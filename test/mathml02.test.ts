@@ -1409,4 +1409,399 @@ suite('MathML 02', () => {
         const expected = '$\\sqrt{\\ln\\ln T}$';
         assert.strictEqual(result.trim(), expected);
     });
+
+    test('empty tree returns empty string', () => {
+        const nodes: AXNode[] = [
+            {
+                nodeId: '2',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'RootWebArea'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '3'
+                ]
+            },
+            {
+                nodeId: '3',
+                ignored: true,
+                role: {
+                    type: 'role',
+                    value: 'none'
+                },
+                name: {
+                    type: 'valueUndefined',
+                    value: undefined
+                },
+                childIds: [
+                    '5'
+                ]
+            },
+            {
+                nodeId: '5',
+                ignored: true,
+                role: {
+                    type: 'role',
+                    value: 'none'
+                },
+                name: {
+                    type: 'valueUndefined',
+                    value: undefined
+                },
+                childIds: [
+                    '6'
+                ]
+            },
+            {
+                nodeId: '6',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLMath'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '7',
+                    '8',
+                    '9'
+                ]
+            },
+            {
+                nodeId: '7',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLIdentifier'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '19'
+                ]
+            },
+            {
+                nodeId: '8',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOperator'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '20'
+                ]
+            },
+            {
+                nodeId: '9',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLRow'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '10',
+                    '11',
+                    '18'
+                ]
+            },
+            {
+                nodeId: '19',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑎'
+                },
+                childIds: [
+                    '-1000000002'
+                ]
+            },
+            {
+                nodeId: '20',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '='
+                },
+                childIds: [
+                    '-1000000003'
+                ]
+            },
+            {
+                nodeId: '10',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOperator'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '21'
+                ]
+            },
+            {
+                nodeId: '11',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLTable'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '12',
+                    '15'
+                ]
+            },
+            {
+                nodeId: '18',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOperator'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000002',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑎'
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000003',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '='
+                },
+                childIds: []
+            },
+            {
+                nodeId: '21',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '{'
+                },
+                childIds: [
+                    '-1000000004'
+                ]
+            },
+            {
+                nodeId: '12',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLTableRow'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '13'
+                ]
+            },
+            {
+                nodeId: '15',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLTableRow'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '16'
+                ]
+            },
+            {
+                nodeId: '-1000000004',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '{'
+                },
+                childIds: []
+            },
+            {
+                nodeId: '13',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLTableCell'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '14'
+                ]
+            },
+            {
+                nodeId: '16',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLTableCell'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '17'
+                ]
+            },
+            {
+                nodeId: '14',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLIdentifier'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '22'
+                ]
+            },
+            {
+                nodeId: '17',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLIdentifier'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '23'
+                ]
+            },
+            {
+                nodeId: '22',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑏'
+                },
+                childIds: [
+                    '-1000000005'
+                ]
+            },
+            {
+                nodeId: '23',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑐'
+                },
+                childIds: [
+                    '-1000000006'
+                ]
+            },
+            {
+                nodeId: '-1000000005',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑏'
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000006',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑐'
+                },
+                childIds: []
+            }
+        ];
+
+        const result = convertAXTreeToMarkdown(testUri, nodes);
+        const expected = `$a=\\begin{cases}
+b \\\\
+c
+\\end{cases}$`;
+        assert.strictEqual(result.trim(), expected);
+    });
 });

@@ -590,7 +590,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return base + sub + sup;
 	}
 
-	const extractMatrixEnv = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
+	const extractMatrixLikeEnv = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
 		const result = child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
 		if (!result) {
 			return false;
@@ -607,6 +607,8 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			return { op, cl, env: 'bmatrix', isMatrix: true };
 		} else if (op === '{' && cl === '}') {
 			return { op, cl, env: 'Bmatrix', isMatrix: true };
+		} else if (op === '{' && cl === '') {
+			return { op, cl, env: 'cases', isMatrix: true };
 		} else if (op.length === 1 && cl.length === 1) {
 			return { op, cl, env: 'matrix', isMatrix: true };
 		} else {
@@ -772,7 +774,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 					const child = node.children[i];
 					const child1 = node.children[i + 1];
 					const child2 = node.children[i + 2];
-					const envResult = extractMatrixEnv(child, child1, child2);
+					const envResult = extractMatrixLikeEnv(child, child1, child2);
 					if (envResult) {
 						if (envResult.isMatrix) {
 							out.push(renderMatrix(child1, envResult.env));
