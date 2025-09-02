@@ -603,7 +603,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			return { op, cl, env: 'pmatrix', isMatrix: true };
 		} else if (op === '|' && cl === '|') {
 			return { op, cl, env: 'vmatrix', isMatrix: true };
-		} else if ((op === '\u{2016}' || op === '\u{2225}') && (cl === '\u{2016}' || cl === '\u{2225}')) {
+		} else if (['\u{2016}', '\u{2225}'].includes(op) && ['\u{2016}', '\u{2225}'].includes(cl)) { // double vertical line or parallel to.
 			return { op, cl, env: 'Vmatrix', isMatrix: true };
 		} else if (op === '[' && cl === ']') {
 			return { op, cl, env: 'bmatrix', isMatrix: true };
