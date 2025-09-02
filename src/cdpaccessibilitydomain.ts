@@ -554,8 +554,19 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	};
 
 	const concatChildren = (n: AXNodeTree) => {
-		return n.children.map(child => recurseTree(child)).join('');
-	};
+		const out: string[] = [];
+		for (const child of n.children) {
+			const childText = recurseTree(child);
+			const lastText = out.length > 0 ? out[out.length - 1] : undefined;
+			if (lastText?.match(/^\\[a-zA-Z]+$/) && childText.match(/^[a-zA-Z]/)) {
+				out.push(' '); // add space to separate operator from identifier
+			}
+			if (childText !== '') {
+				out.push(childText);
+			}
+		};
+		return out.join('')
+	}
 
 	const combineBaseSubSup = (base: string, sub: string | undefined = '', sup: string | undefined = '') => {
 		if (base.length !== 1 && !/^\\[a-zA-Z]+$/.test(base)) {
@@ -754,7 +765,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			}
 
 			case 'MathMLRow': {
-				let out = '';
+				const out: string[] = [];
 				for (let i = 0; i < node.children.length; i++) {
 					const child = node.children[i];
 					const child1 = node.children[i + 1];
@@ -762,18 +773,25 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 					const envResult = extractMatrixEnv(child, child1, child2);
 					if (envResult) {
 						if (envResult.isMatrix) {
-							out += renderMatrix(child1, envResult.env);
+							out.push(renderMatrix(child1, envResult.env));
 						} else {
-							out += envResult.op;
-							out += recurseTree(child1);
-							out += envResult.cl;
+							out.push(envResult.op);
+							out.push(recurseTree(child1));
+							out.push(envResult.cl);
 						}
 						i += 2;
 					} else {
-						out += recurseTree(child);
+						const childText = recurseTree(child);
+						const lastText = out.length > 0 ? out[out.length - 1] : undefined;
+						if (lastText?.match(/^\\[a-zA-Z]+$/) && childText.match(/^[a-zA-Z]/)) {
+							out.push(' '); // add space to separate operator from identifier
+						}
+						if (childText !== '') {
+							out.push(childText);
+						}
 					}
 				}
-				return out;
+				return out.join('');
 			}
 
 			case 'MathMLMath':
