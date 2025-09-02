@@ -630,6 +630,11 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return `\\begin{${env}}\n${rows.join(' \\\\\n')}\n\\end{${env}}`;
 	};
 
+	const opNames = new Set([
+		'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh',
+		'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'argmax', 'argmin'
+	]);
+
 	const recurseTree = (node: AXNodeTree | undefined): string => {
 		if (!node || visited.has(node.node.nodeId)) {
 			return '';
@@ -642,7 +647,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			case 'MathMLIdentifier': {
 				let text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
 				text = text.trim();
-				const opNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'argmax', 'argmin']);
+
 				if (opNames.has(text)) {
 					return `\\${text}`;
 				} else if (text.length > 1) {
