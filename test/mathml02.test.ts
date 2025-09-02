@@ -854,4 +854,286 @@ suite('MathML 02', () => {
         const expected = '$∫_a^bf(x)dx$';
         assert.strictEqual(result.trim(), expected);
     });
+
+    test('hat', () => {
+        const nodes: AXNode[] = [
+            {
+                nodeId: '6',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLMath'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '7'
+                ]
+            },
+            {
+                nodeId: '7',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLRow'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '8'
+                ]
+            },
+            {
+                nodeId: '8',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOver'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '9',
+                    '10'
+                ]
+            },
+            {
+                nodeId: '9',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLIdentifier'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '11'
+                ]
+            },
+            {
+                nodeId: '10',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOperator'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '12'
+                ]
+            },
+            {
+                nodeId: '11',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑎'
+                },
+                childIds: [
+                    '-1000000002'
+                ]
+            },
+            {
+                nodeId: '12',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '^'
+                },
+                childIds: [
+                    '-1000000003'
+                ]
+            },
+            {
+                nodeId: '-1000000002',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑎'
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000003',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '^'
+                },
+                childIds: []
+            }
+        ];
+
+        const result = convertAXTreeToMarkdown(testUri, nodes);
+        const expected = '$\\hat{a}$';
+        assert.strictEqual(result.trim(), expected);
+    });
+
+    test('ddot', () => {
+        const nodes: AXNode[] = [
+            {
+                nodeId: '5',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLMath'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '6'
+                ]
+            },
+            {
+                nodeId: '6',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLRow'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '7'
+                ]
+            },
+            {
+                nodeId: '7',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOver'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '8',
+                    '9'
+                ]
+            },
+            {
+                nodeId: '8',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLIdentifier'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '10'
+                ]
+            },
+            {
+                nodeId: '9',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'MathMLOperator'
+                },
+                name: {
+                    type: 'computedString',
+                    value: ''
+                },
+                childIds: [
+                    '11'
+                ]
+            },
+            {
+                nodeId: '10',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑎'
+                },
+                childIds: [
+                    '-1000000002'
+                ]
+            },
+            {
+                nodeId: '11',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'StaticText'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '¨'
+                },
+                childIds: [
+                    '-1000000003'
+                ]
+            },
+            {
+                nodeId: '-1000000002',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '𝑎'
+                },
+                childIds: []
+            },
+            {
+                nodeId: '-1000000003',
+                ignored: false,
+                role: {
+                    type: 'internalRole',
+                    value: 'InlineTextBox'
+                },
+                name: {
+                    type: 'computedString',
+                    value: '¨'
+                },
+                childIds: []
+            }
+        ];
+
+        const result = convertAXTreeToMarkdown(testUri, nodes);
+        const expected = '$\\ddot{a}$';
+        assert.strictEqual(result.trim(), expected);
+    });
 });

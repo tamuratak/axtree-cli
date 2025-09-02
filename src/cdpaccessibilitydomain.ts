@@ -557,14 +557,27 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return n.children.map(child => recurseTree(child)).join('');
 	};
 
-	const getBaseString = (n: AXNodeTree): string => {
-		const base = recurseTree(n);
-		if (base.length === 1 || /^\\[a-zA-Z]+$/.test(base)) {
-			return base;
-		} else {
-			return `{${base}}`;
+	const combineBaseSubSup = (base: string, sub: string | undefined = '', sup: string | undefined = '') => {
+		if (base.length !== 1 && !/^\\[a-zA-Z]+$/.test(base)) {
+			base = `{${base}}`;
 		}
-	};
+		if (sub) {
+			if (sub.length === 1) {
+				sub = `_${sub}`;
+			} else {
+				sub = `_{${sub}}`;
+			}
+
+		}
+		if (sup) {
+			if (sup.length === 1) {
+				sup = `^${sup}`;
+			} else {
+				sup = `^{${sup}}`;
+			}
+		}
+		return base + sub + sup;
+	}
 
 	const extractMatrixEnv = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
 		const result = child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
@@ -592,7 +605,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 	const renderMatrix = (child1: AXNodeTree, env: string) => {
 		if (child1.node.role?.value !== 'MathMLTable') {
-			throw new Error('Not a matrix');
+			return '';
 		}
 		const rows: string[] = [];
 		for (const ch of child1.children) {
@@ -612,14 +625,15 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 		const role = typeof node.node.role?.value === 'string' ? node.node.role.value : '';
 		switch (role) {
+			case 'MathMLOperator':
 			case 'MathMLIdentifier': {
-				const text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
-				const funcNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min']);
-				if (funcNames.has(text)) {
+				let text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
+				text = text.trim();
+				const opNames = new Set(['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'argmax', 'argmin']);
+				if (opNames.has(text)) {
 					return `\\${text}`;
 				} else if (text.length > 1) {
 					return `\\operatorname{${text}}`;
-
 				} else {
 					return text;
 				}
@@ -631,45 +645,90 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			}
 
 			case 'MathMLNumber':
-			case 'MathMLOperator':
 			case 'StaticText':
-			case 'InlineTextBox':
+			case 'InlineTextBox': {
 				if (node.children.length > 0) {
 					return concatChildren(node);
 				}
 				return getTextFromNode(node);
+			}
+
+			case 'MathMLOver': {
+				const base = recurseTree(node.children[0]);
+				let cmd = recurseTree(node.children[1]);
+				cmd = cmd.trim();
+				const accentMap: Record<string, string> = {
+					'\u{af}': 'bar',
+					'\u{a8}': 'ddot',
+					'\u{20db}': 'dddot',
+					'^': 'hat',
+					'~': 'tilde',
+					'\u{2015}': 'overline',
+					'`': 'grave',
+					'\u{b4}': 'acute',
+					'\u{2192}': 'vec', // right arrow
+					'\u{2c6}': 'hat',
+					'\u{2c7}': 'check',
+					'\u{2c9}': 'bar',
+					'\u{2ca}': 'acute',
+					'\u{2cb}': 'grave',
+					'\u{2d8}': 'breve',
+					'\u{2d9}': 'dot',
+					'\u{2da}': 'ring',
+					'\u{2dc}': 'tilde',
+					'\u{300}': 'grave',
+					'\u{301}': 'acute',
+					'\u{302}': 'hat',
+					'\u{303}': 'tilde',
+					'\u{304}': 'bar',
+					'\u{305}': 'bar',
+					'\u{306}': 'breve',
+					'\u{307}': 'dot',
+					'\u{308}': 'ddot',
+					'\u{30a}': 'ring',
+					'\u{30c}': 'check'
+				};
+				let texCmd = accentMap[cmd];
+				if (texCmd) {
+					if (texCmd === 'hat' && base.length > 1) {
+						texCmd = 'widehat';
+					} else if (texCmd === 'check' && base.length > 1) {
+						texCmd = 'widecheck';
+					} else if (texCmd === 'tilde' && base.length > 1) {
+						texCmd = 'widetilde';
+					}
+					return `\\${texCmd}{${base}}`;
+				} else {
+					return combineBaseSubSup(base, undefined, cmd);
+				}
+			}
 
 			case 'MathMLSup': {
-				const base = getBaseString(node.children[0]);
-				const exp = node.children[1] ? recurseTree(node.children[1]) : '';
-				return exp.length === 1 ? `${base}^${exp}` : `${base}^{${exp}}`;
+				const base = recurseTree(node.children[0]);
+				const exp = recurseTree(node.children[1]);
+				return combineBaseSubSup(base, undefined, exp);
 			}
 
+			case 'MathMLUnder':
 			case 'MathMLSub': {
-				const base = getBaseString(node.children[0]);
-				const sub = node.children[1] ? recurseTree(node.children[1]) : '';
-				return sub.length === 1 ? `${base}_${sub}` : `${base}_{${sub}}`;
+				const base = recurseTree(node.children[0]);
+				const sub = recurseTree(node.children[1]);
+				return combineBaseSubSup(base, sub);
 			}
 
+			case 'MathMLUnderOver':
 			case 'MathMLSubSup': {
 				// Handles nodes with both subscript and superscript (e.g. limits on \int)
-				const base = getBaseString(node.children[0]);
-				const sub = node.children[1] ? recurseTree(node.children[1]) : '';
-				const sup = node.children[2] ? recurseTree(node.children[2]) : '';
-				let out = base;
-				if (sub) {
-					out += sub.length === 1 ? `_${sub}` : `_{${sub}}`;
-				}
-				if (sup) {
-					out += sup.length === 1 ? `^${sup}` : `^{${sup}}`;
-				}
-				return out;
+				const base = recurseTree(node.children[0]);
+				const sub = recurseTree(node.children[1]);
+				const sup = recurseTree(node.children[2]);
+				return combineBaseSubSup(base, sub, sup);
 			}
 
 			case 'MathMLFraction': {
 				// numerator then denominator
-				const num = node.children[0] ? recurseTree(node.children[0]) : '';
-				const den = node.children[1] ? recurseTree(node.children[1]) : '';
+				const num = recurseTree(node.children[0]);
+				const den = recurseTree(node.children[1]);
 				return `\\frac{${num}}{${den}}`;
 			}
 
@@ -679,8 +738,8 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			}
 
 			case 'MathMLRoot': {
-				const rad = node.children[0] ? recurseTree(node.children[0]) : '';
-				const index = node.children[1] ? recurseTree(node.children[1]) : '';
+				const rad = recurseTree(node.children[0]);
+				const index = recurseTree(node.children[1]);
 				return `\\sqrt[${index}]{${rad}}`;
 			}
 
