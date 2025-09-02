@@ -554,8 +554,19 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 	};
 
 	const concatChildren = (n: AXNodeTree) => {
-		return n.children.map(child => recurseTree(child)).join('');
-	};
+		const out: string[] = [];
+		for (const child of n.children) {
+			const childText = recurseTree(child);
+			const lastText = out.length > 0 ? out[out.length - 1] : undefined;
+			if (lastText?.match(/^\\[a-zA-Z]+$/) && childText.match(/^[a-zA-Z]/)) {
+				out.push(' '); // add space to separate operator from identifier
+			}
+			if (childText !== '') {
+				out.push(childText);
+			}
+		};
+		return out.join('')
+	}
 
 	const combineBaseSubSup = (base: string, sub: string | undefined = '', sup: string | undefined = '') => {
 		if (base.length !== 1 && !/^\\[a-zA-Z]+$/.test(base)) {
@@ -579,7 +590,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return base + sub + sup;
 	}
 
-	const extractMatrixEnv = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
+	const extractMatrixLikeEnv = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
 		const result = child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
 		if (!result) {
 			return false;
@@ -596,6 +607,8 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			return { op, cl, env: 'bmatrix', isMatrix: true };
 		} else if (op === '{' && cl === '}') {
 			return { op, cl, env: 'Bmatrix', isMatrix: true };
+		} else if (op === '{' && cl === '') {
+			return { op, cl, env: 'cases', isMatrix: true };
 		} else if (op.length === 1 && cl.length === 1) {
 			return { op, cl, env: 'matrix', isMatrix: true };
 		} else {
@@ -634,6 +647,8 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 					return `\\${text}`;
 				} else if (text.length > 1) {
 					return `\\operatorname{${text}}`;
+				} else if (text === '#') {
+					return '\\#';
 				} else {
 					return text;
 				}
@@ -754,26 +769,33 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			}
 
 			case 'MathMLRow': {
-				let out = '';
+				const out: string[] = [];
 				for (let i = 0; i < node.children.length; i++) {
 					const child = node.children[i];
 					const child1 = node.children[i + 1];
 					const child2 = node.children[i + 2];
-					const envResult = extractMatrixEnv(child, child1, child2);
+					const envResult = extractMatrixLikeEnv(child, child1, child2);
 					if (envResult) {
 						if (envResult.isMatrix) {
-							out += renderMatrix(child1, envResult.env);
+							out.push(renderMatrix(child1, envResult.env));
 						} else {
-							out += envResult.op;
-							out += recurseTree(child1);
-							out += envResult.cl;
+							out.push(envResult.op);
+							out.push(recurseTree(child1));
+							out.push(envResult.cl);
 						}
 						i += 2;
 					} else {
-						out += recurseTree(child);
+						const childText = recurseTree(child);
+						const lastText = out.length > 0 ? out[out.length - 1] : undefined;
+						if (lastText?.match(/^\\[a-zA-Z]+$/) && childText.match(/^[a-zA-Z]/)) {
+							out.push(' '); // add space to separate operator from identifier
+						}
+						if (childText !== '') {
+							out.push(childText);
+						}
 					}
 				}
-				return out;
+				return out.join('');
 			}
 
 			case 'MathMLMath':
