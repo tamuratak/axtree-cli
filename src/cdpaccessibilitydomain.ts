@@ -553,7 +553,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return normalizeMathIdentifier(text);
 	};
 
-	const concatChildren = (n: AXNodeTree) => {
+	const concatChildren = (n: AXNodeTree): string => {
 		const out: string[] = [];
 		for (const child of n.children) {
 			const childText = recurseTree(child);
@@ -568,7 +568,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return out.join('')
 	}
 
-	const combineBaseSubSup = (base: string, sub: string | undefined = '', sup: string | undefined = '') => {
+	const combineBaseSubSup = (base: string, sub: string | undefined = '', sup: string | undefined = ''): string => {
 		if (base.length !== 1 && !/^\\[a-zA-Z]+$/.test(base)) {
 			base = `{${base}}`;
 		}
@@ -616,7 +616,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		}
 	}
 
-	const renderMatrix = (child1: AXNodeTree, env: string) => {
+	const renderMatrix = (child1: AXNodeTree, env: string): string => {
 		if (child1.node.role?.value !== 'MathMLTable') {
 			return '';
 		}
