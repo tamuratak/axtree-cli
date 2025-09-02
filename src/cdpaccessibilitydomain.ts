@@ -700,7 +700,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 					}
 					return `\\${texCmd}{${base}}`;
 				} else {
-					return /^[a-zA-Z0-9]$/.test(cmd) ? `${base}^${cmd}` : `${base}^{${cmd}}`;
+					return combineBaseSubSup(base, undefined, cmd);
 				}
 			}
 
