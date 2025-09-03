@@ -532,296 +532,298 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 	}
 }
 
-function convertMathMLNodeToLatex(root: AXNodeTree): string {
-	const visited = new Set<string>();
+const latexOpNames = new Set([
+	'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh',
+	'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'arg', 'argmax', 'argmin'
+]);
 
-	const normalizeMathIdentifier = (text: string): string => {
-		if (text === '') {
-			return text;
+const latexAccentMap: Record<string, string> = {
+	'\u{af}': 'bar',
+	'\u{a8}': 'ddot',
+	'\u{20db}': 'dddot',
+	'^': 'hat',
+	'~': 'tilde',
+	'\u{2015}': 'overline',
+	'`': 'grave',
+	'\u{b4}': 'acute',
+	'\u{2192}': 'vec', // right arrow
+	'\u{2c6}': 'hat',
+	'\u{2c7}': 'check',
+	'\u{2c9}': 'bar',
+	'\u{2ca}': 'acute',
+	'\u{2cb}': 'grave',
+	'\u{2d8}': 'breve',
+	'\u{2d9}': 'dot',
+	'\u{2da}': 'ring',
+	'\u{2dc}': 'tilde',
+	'\u{300}': 'grave',
+	'\u{301}': 'acute',
+	'\u{302}': 'hat',
+	'\u{303}': 'tilde',
+	'\u{304}': 'bar',
+	'\u{305}': 'bar',
+	'\u{306}': 'breve',
+	'\u{307}': 'dot',
+	'\u{308}': 'ddot',
+	'\u{30a}': 'ring',
+	'\u{30c}': 'check'
+};
+
+let mathmlVisited: Set<string>;
+
+function convertMathMLNodeToLatex(root: AXNodeTree): string {
+	mathmlVisited = new Set<string>();
+	return recurseMathMLTree(root);
+}
+
+function recurseMathMLTree(node: AXNodeTree | undefined): string {
+	if (!node || mathmlVisited.has(node.node.nodeId)) {
+		return '';
+	}
+	mathmlVisited.add(node.node.nodeId);
+
+	const role = typeof node.node.role?.value === 'string' ? node.node.role.value : '';
+	switch (role) {
+		case 'MathMLOperator':
+		case 'MathMLIdentifier': {
+			let text = node.children.length > 0 ? concatMatMLChildren(node) : getTextFromMathMLNode(node);
+			text = text.trim();
+			if (latexOpNames.has(text)) {
+				return `\\${text}`;
+			} else if (/^[a-zA-Z]+$/.test(text) && text.length > 1) {
+				return `\\operatorname{${text}}`;
+			} else if (['_', '%', '&', '#'].includes(text)) {
+				return `\\${text}`;
+			} else {
+				return text;
+			}
 		}
-		const normalized = text.normalize('NFKC');
-		if (/^[\u{1D434}-\u{1D467}]+$/gu.test(text)) {
-			// Convert Mathematical Italic letters to ASCIIs
-			text = normalized;
-		} else if (!/^[a-zA-Z]+$/.test(normalized)) {
-			// Normalize mathematical symobols
-			text = normalized;
+
+		case 'MathMLText': {
+			const text = node.children.length > 0 ? concatMatMLChildren(node) : getTextFromMathMLNode(node);
+			return `\\text{${text}}`;
 		}
-		text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
-			.replace(/[\u{2061}\u{2062}\u{2063}\u{2064}]/gu, '')
-		// remove the follwoing
-		// - invisible function application symbol
-		// - invisible times
-		// - invisible separator
-		// - invisible plus
+
+		case 'MathMLNumber':
+		case 'StaticText':
+		case 'InlineTextBox': {
+			if (node.children.length > 0) {
+				return concatMatMLChildren(node);
+			}
+			return getTextFromMathMLNode(node);
+		}
+
+		case 'MathMLOver': {
+			const base = recurseMathMLTree(node.children[0]);
+			let cmd = recurseMathMLTree(node.children[1]);
+			cmd = cmd.trim();
+			let texCmd = latexAccentMap[cmd];
+			if (texCmd) {
+				if (texCmd === 'hat' && cpLength(base) > 1) {
+					texCmd = 'widehat';
+				} else if (texCmd === 'check' && cpLength(base) > 1) {
+					texCmd = 'widecheck';
+				} else if (texCmd === 'tilde' && cpLength(base) > 1) {
+					texCmd = 'widetilde';
+				}
+				return `\\${texCmd}{${base}}`;
+			} else {
+				return combineBaseSubSup(base, undefined, cmd);
+			}
+		}
+
+		case 'MathMLSup': {
+			const base = recurseMathMLTree(node.children[0]);
+			const exp = recurseMathMLTree(node.children[1]);
+			return combineBaseSubSup(base, undefined, exp);
+		}
+
+		case 'MathMLUnder':
+		case 'MathMLSub': {
+			const base = recurseMathMLTree(node.children[0]);
+			const sub = recurseMathMLTree(node.children[1]);
+			return combineBaseSubSup(base, sub);
+		}
+
+		case 'MathMLUnderOver':
+		case 'MathMLSubSup': {
+			const base = recurseMathMLTree(node.children[0]);
+			const sub = recurseMathMLTree(node.children[1]);
+			const sup = recurseMathMLTree(node.children[2]);
+			return combineBaseSubSup(base, sub, sup);
+		}
+
+		case 'MathMLFraction': {
+			const num = recurseMathMLTree(node.children[0]);
+			const den = recurseMathMLTree(node.children[1]);
+			return `\\frac{${num}}{${den}}`;
+		}
+
+		case 'MathMLSquareRoot': {
+			return `\\sqrt{${concatMatMLChildren(node)}}`;
+		}
+
+		case 'MathMLRoot': {
+			const rad = recurseMathMLTree(node.children[0]);
+			const index = recurseMathMLTree(node.children[1]);
+			return `\\sqrt[${index}]{${rad}}`;
+		}
+
+		case 'MathMLTable': {
+			const rows: string[] = [];
+			for (const ch of node.children) {
+				if (ch.node.role?.value === 'MathMLTableRow') {
+					rows.push(concatMatMLChildren(ch));
+				}
+			}
+			return `\\begin{align*}\n${rows.join(' \\\\\n')}\n\\end{align*}`;
+		}
+
+		case 'MathMLRow': {
+			const out: string[] = [];
+			for (let i = 0; i < node.children.length; i++) {
+				const child = node.children[i];
+				const child1 = node.children[i + 1];
+				const child2 = node.children[i + 2];
+				const envResult = extractMatrixLikeEnv(child, child1, child2);
+				if (envResult) {
+					if (envResult.isMatrix) {
+						out.push(renderLatexMatrix(child1, envResult.env));
+					} else {
+						out.push(envResult.op);
+						out.push(recurseMathMLTree(child1));
+						out.push(envResult.cl);
+					}
+					i += 2;
+				} else {
+					const childText = recurseMathMLTree(child);
+					const lastText = out.length > 0 ? out[out.length - 1] : undefined;
+					if (lastText?.match(/^\\[a-zA-Z]+$/) && childText.match(/^[a-zA-Z]/)) {
+						out.push(' '); // add space to separate operator from identifier
+					}
+					if (childText !== '') {
+						out.push(childText);
+					}
+				}
+			}
+			return out.join('');
+		}
+
+		case 'MathMLMath':
+		default: {
+			return concatMatMLChildren(node);
+		}
+	}
+}
+
+function normalizeMathIdentifier(text: string): string {
+	if (text === '') {
 		return text;
 	}
-
-	const getTextFromNode = (n: AXNodeTree): string => {
-		const text = typeof n.node.name?.value === 'string' ? n.node.name.value : '';
-		return normalizeMathIdentifier(text);
-	};
-
-	const concatChildren = (n: AXNodeTree): string => {
-		const out: string[] = [];
-		for (const child of n.children) {
-			const childText = recurseTree(child);
-			const lastText = out.length > 0 ? out[out.length - 1] : undefined;
-			if (lastText?.match(/^\\[a-zA-Z]+$/) && childText.match(/^[a-zA-Z]/)) {
-				out.push(' '); // add space to separate operator from identifier
-			}
-			if (childText !== '') {
-				out.push(childText);
-			}
-		};
-		return out.join('')
+	const normalized = text.normalize('NFKC');
+	if (/^[\u{1D434}-\u{1D467}]+$/gu.test(text)) {
+		// Convert Mathematical Italic letters to ASCIIs
+		text = normalized;
+	} else if (!/^[a-zA-Z]+$/.test(normalized)) {
+		// Normalize mathematical symobols
+		text = normalized;
 	}
-
-	/**
-	 * Get the length of a string in terms of Unicode code points
-	 */
-	const cpLength = (text: string): number => {
-		return [...text].length;
-	}
-
-	const combineBaseSubSup = (base: string, sub: string | undefined = '', sup: string | undefined = ''): string => {
-		if (cpLength(base) !== 1 && !/^\\[a-zA-Z]+$/.test(base)) {
-			base = `{${base}}`;
-		}
-		if (sub) {
-			if (cpLength(sub) === 1) {
-				sub = `_${sub}`;
-			} else {
-				sub = `_{${sub}}`;
-			}
-
-		}
-		if (sup) {
-			if (cpLength(sup) === 1) {
-				sup = `^${sup}`;
-			} else {
-				sup = `^{${sup}}`;
-			}
-		}
-		return base + sub + sup;
-	}
-
-	const extractMatrixLikeEnv = (child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) => {
-		const result = child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
-		if (!result) {
-			return false;
-		}
-		const op = recurseTree(child);
-		const cl = recurseTree(child2);
-		if (op === '(' && cl === ')') {
-			return { op, cl, env: 'pmatrix', isMatrix: true };
-		} else if (op === '|' && cl === '|') {
-			return { op, cl, env: 'vmatrix', isMatrix: true };
-		} else if (['\u{2016}', '\u{2225}'].includes(op) && ['\u{2016}', '\u{2225}'].includes(cl)) { // double vertical line or parallel to.
-			return { op, cl, env: 'Vmatrix', isMatrix: true };
-		} else if (op === '[' && cl === ']') {
-			return { op, cl, env: 'bmatrix', isMatrix: true };
-		} else if (op === '{' && cl === '}') {
-			return { op, cl, env: 'Bmatrix', isMatrix: true };
-		} else if (op === '{' && cl === '') {
-			return { op, cl, env: 'cases', isMatrix: true };
-		} else if (cpLength(op) === 1 && cpLength(cl) === 1) {
-			return { op, cl, env: 'matrix', isMatrix: true };
-		} else {
-			return { op, cl, env: 'align*', isMatrix: false };
-		}
-	}
-
-	const renderMatrix = (child1: AXNodeTree, env: string): string => {
-		if (child1.node.role?.value !== 'MathMLTable') {
-			return '';
-		}
-		const rows: string[] = [];
-		for (const ch of child1.children) {
-			if (ch.node.role?.value === 'MathMLTableRow') {
-				const cells = ch.children.map(cellChild => recurseTree(cellChild));
-				rows.push(cells.join(' & '));
-			}
-		}
-		return `\\begin{${env}}\n${rows.join(' \\\\\n')}\n\\end{${env}}`;
-	};
-
-	const opNames = new Set([
-		'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh',
-		'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'arg', 'argmax', 'argmin'
-	]);
-
-	const accentMap: Record<string, string> = {
-		'\u{af}': 'bar',
-		'\u{a8}': 'ddot',
-		'\u{20db}': 'dddot',
-		'^': 'hat',
-		'~': 'tilde',
-		'\u{2015}': 'overline',
-		'`': 'grave',
-		'\u{b4}': 'acute',
-		'\u{2192}': 'vec', // right arrow
-		'\u{2c6}': 'hat',
-		'\u{2c7}': 'check',
-		'\u{2c9}': 'bar',
-		'\u{2ca}': 'acute',
-		'\u{2cb}': 'grave',
-		'\u{2d8}': 'breve',
-		'\u{2d9}': 'dot',
-		'\u{2da}': 'ring',
-		'\u{2dc}': 'tilde',
-		'\u{300}': 'grave',
-		'\u{301}': 'acute',
-		'\u{302}': 'hat',
-		'\u{303}': 'tilde',
-		'\u{304}': 'bar',
-		'\u{305}': 'bar',
-		'\u{306}': 'breve',
-		'\u{307}': 'dot',
-		'\u{308}': 'ddot',
-		'\u{30a}': 'ring',
-		'\u{30c}': 'check'
-	};
-
-	const recurseTree = (node: AXNodeTree | undefined): string => {
-		if (!node || visited.has(node.node.nodeId)) {
-			return '';
-		}
-		visited.add(node.node.nodeId);
-
-		const role = typeof node.node.role?.value === 'string' ? node.node.role.value : '';
-		switch (role) {
-			case 'MathMLOperator':
-			case 'MathMLIdentifier': {
-				let text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
-				text = text.trim();
-				if (opNames.has(text)) {
-					return `\\${text}`;
-				} else if (/^[a-zA-Z]+$/.test(text) && text.length > 1) {
-					return `\\operatorname{${text}}`;
-				} else if (['_', '%', '&', '#'].includes(text)) {
-					return `\\${text}`;
-				} else {
-					return text;
-				}
-			}
-
-			case 'MathMLText': {
-				const text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
-				return `\\text{${text}}`;
-			}
-
-			case 'MathMLNumber':
-			case 'StaticText':
-			case 'InlineTextBox': {
-				if (node.children.length > 0) {
-					return concatChildren(node);
-				}
-				return getTextFromNode(node);
-			}
-
-			case 'MathMLOver': {
-				const base = recurseTree(node.children[0]);
-				let cmd = recurseTree(node.children[1]);
-				cmd = cmd.trim();
-				let texCmd = accentMap[cmd];
-				if (texCmd) {
-					if (texCmd === 'hat' && cpLength(base) > 1) {
-						texCmd = 'widehat';
-					} else if (texCmd === 'check' && cpLength(base) > 1) {
-						texCmd = 'widecheck';
-					} else if (texCmd === 'tilde' && cpLength(base) > 1) {
-						texCmd = 'widetilde';
-					}
-					return `\\${texCmd}{${base}}`;
-				} else {
-					return combineBaseSubSup(base, undefined, cmd);
-				}
-			}
-
-			case 'MathMLSup': {
-				const base = recurseTree(node.children[0]);
-				const exp = recurseTree(node.children[1]);
-				return combineBaseSubSup(base, undefined, exp);
-			}
-
-			case 'MathMLUnder':
-			case 'MathMLSub': {
-				const base = recurseTree(node.children[0]);
-				const sub = recurseTree(node.children[1]);
-				return combineBaseSubSup(base, sub);
-			}
-
-			case 'MathMLUnderOver':
-			case 'MathMLSubSup': {
-				const base = recurseTree(node.children[0]);
-				const sub = recurseTree(node.children[1]);
-				const sup = recurseTree(node.children[2]);
-				return combineBaseSubSup(base, sub, sup);
-			}
-
-			case 'MathMLFraction': {
-				const num = recurseTree(node.children[0]);
-				const den = recurseTree(node.children[1]);
-				return `\\frac{${num}}{${den}}`;
-			}
-
-			case 'MathMLSquareRoot': {
-				return `\\sqrt{${concatChildren(node)}}`;
-			}
-
-			case 'MathMLRoot': {
-				const rad = recurseTree(node.children[0]);
-				const index = recurseTree(node.children[1]);
-				return `\\sqrt[${index}]{${rad}}`;
-			}
-
-			case 'MathMLTable': {
-				const rows: string[] = [];
-				for (const ch of node.children) {
-					if (ch.node.role?.value === 'MathMLTableRow') {
-						rows.push(concatChildren(ch));
-					}
-				}
-				return `\\begin{align*}\n${rows.join(' \\\\\n')}\n\\end{align*}`;
-			}
-
-			case 'MathMLRow': {
-				const out: string[] = [];
-				for (let i = 0; i < node.children.length; i++) {
-					const child = node.children[i];
-					const child1 = node.children[i + 1];
-					const child2 = node.children[i + 2];
-					const envResult = extractMatrixLikeEnv(child, child1, child2);
-					if (envResult) {
-						if (envResult.isMatrix) {
-							out.push(renderMatrix(child1, envResult.env));
-						} else {
-							out.push(envResult.op);
-							out.push(recurseTree(child1));
-							out.push(envResult.cl);
-						}
-						i += 2;
-					} else {
-						const childText = recurseTree(child);
-						const lastText = out.length > 0 ? out[out.length - 1] : undefined;
-						if (lastText?.match(/^\\[a-zA-Z]+$/) && childText.match(/^[a-zA-Z]/)) {
-							out.push(' '); // add space to separate operator from identifier
-						}
-						if (childText !== '') {
-							out.push(childText);
-						}
-					}
-				}
-				return out.join('');
-			}
-
-			case 'MathMLMath':
-			default: {
-				return concatChildren(node);
-			}
-		}
-	}
-
-	return recurseTree(root);
+	text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
+		.replace(/[\u{2061}\u{2062}\u{2063}\u{2064}]/gu, '')
+	// remove the follwoing
+	// - invisible function application symbol
+	// - invisible times
+	// - invisible separator
+	// - invisible plus
+	return text;
 }
+
+function getTextFromMathMLNode(n: AXNodeTree): string {
+	const text = typeof n.node.name?.value === 'string' ? n.node.name.value : '';
+	return normalizeMathIdentifier(text);
+}
+
+function concatMatMLChildren(n: AXNodeTree): string {
+	const out: string[] = [];
+	for (const child of n.children) {
+		const childText = recurseMathMLTree(child);
+		const lastText = out.length > 0 ? out[out.length - 1] : undefined;
+		if (lastText?.match(/^\\[a-zA-Z]+$/) && childText.match(/^[a-zA-Z]/)) {
+			out.push(' '); // add space to separate operator from identifier
+		}
+		if (childText !== '') {
+			out.push(childText);
+		}
+	};
+	return out.join('')
+}
+
+/**
+ * Get the length of a string in terms of Unicode code points
+ */
+function cpLength(text: string): number {
+	return [...text].length;
+}
+
+function combineBaseSubSup(base: string, sub: string | undefined = '', sup: string | undefined = ''): string {
+	if (cpLength(base) !== 1 && !/^\\[a-zA-Z]+$/.test(base)) {
+		base = `{${base}}`;
+	}
+	if (sub) {
+		if (cpLength(sub) === 1) {
+			sub = `_${sub}`;
+		} else {
+			sub = `_{${sub}}`;
+		}
+
+	}
+	if (sup) {
+		if (cpLength(sup) === 1) {
+			sup = `^${sup}`;
+		} else {
+			sup = `^{${sup}}`;
+		}
+	}
+	return base + sub + sup;
+}
+
+function extractMatrixLikeEnv(child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) {
+	const result = child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
+	if (!result) {
+		return false;
+	}
+	const op = recurseMathMLTree(child);
+	const cl = recurseMathMLTree(child2);
+	if (op === '(' && cl === ')') {
+		return { op, cl, env: 'pmatrix', isMatrix: true };
+	} else if (op === '|' && cl === '|') {
+		return { op, cl, env: 'vmatrix', isMatrix: true };
+	} else if (['\u{2016}', '\u{2225}'].includes(op) && ['\u{2016}', '\u{2225}'].includes(cl)) { // double vertical line or parallel to.
+		return { op, cl, env: 'Vmatrix', isMatrix: true };
+	} else if (op === '[' && cl === ']') {
+		return { op, cl, env: 'bmatrix', isMatrix: true };
+	} else if (op === '{' && cl === '}') {
+		return { op, cl, env: 'Bmatrix', isMatrix: true };
+	} else if (op === '{' && cl === '') {
+		return { op, cl, env: 'cases', isMatrix: true };
+	} else if (cpLength(op) === 1 && cpLength(cl) === 1) {
+		return { op, cl, env: 'matrix', isMatrix: true };
+	} else {
+		return { op, cl, env: 'align*', isMatrix: false };
+	}
+}
+
+function renderLatexMatrix(child1: AXNodeTree, env: string): string {
+	if (child1.node.role?.value !== 'MathMLTable') {
+		return '';
+	}
+	const rows: string[] = [];
+	for (const ch of child1.children) {
+		if (ch.node.role?.value === 'MathMLTableRow') {
+			const cells = ch.children.map(cellChild => recurseMathMLTree(cellChild));
+			rows.push(cells.join(' & '));
+		}
+	}
+	return `\\begin{${env}}\n${rows.join(' \\\\\n')}\n\\end{${env}}`;
+};
+
