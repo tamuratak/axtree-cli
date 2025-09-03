@@ -539,7 +539,14 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		if (text === '') {
 			return text;
 		}
-		text = text.normalize('NFKC');
+		const normalized = text.normalize('NFKC');
+		if (/^[\u{1D434}-\u{1D467}]+$/gu.test(text)) {
+			// Convert Mathematical Italic letters to ASCIIs
+			text = normalized;
+		} else if (!/^[a-zA-Z]+$/.test(normalized)) {
+			// Normalize mathematical symobols
+			text = normalized;
+		}
 		text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
 			.replace(/[\u{2061}\u{2062}\u{2063}\u{2064}]/gu, '')
 			// remove the follwoing
@@ -570,12 +577,19 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return out.join('')
 	}
 
+	/**
+	 * Get the length of a string in terms of Unicode code points
+	 */
+	const cpLength = (text: string): number => {
+		return [...text].length;
+	}
+
 	const combineBaseSubSup = (base: string, sub: string | undefined = '', sup: string | undefined = ''): string => {
-		if (base.length !== 1 && !/^\\[a-zA-Z]+$/.test(base)) {
+		if (cpLength(base) !== 1 && !/^\\[a-zA-Z]+$/.test(base)) {
 			base = `{${base}}`;
 		}
 		if (sub) {
-			if (sub.length === 1) {
+			if (cpLength(sub) === 1) {
 				sub = `_${sub}`;
 			} else {
 				sub = `_{${sub}}`;
@@ -583,7 +597,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 		}
 		if (sup) {
-			if (sup.length === 1) {
+			if (cpLength(sup) === 1) {
 				sup = `^${sup}`;
 			} else {
 				sup = `^{${sup}}`;
@@ -611,7 +625,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			return { op, cl, env: 'Bmatrix', isMatrix: true };
 		} else if (op === '{' && cl === '') {
 			return { op, cl, env: 'cases', isMatrix: true };
-		} else if (op.length === 1 && cl.length === 1) {
+		} else if (cpLength(op) === 1 && cpLength(cl) === 1) {
 			return { op, cl, env: 'matrix', isMatrix: true };
 		} else {
 			return { op, cl, env: 'align*', isMatrix: false };
@@ -634,7 +648,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 	const opNames = new Set([
 		'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh',
-		'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'argmax', 'argmin'
+		'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'arg', 'argmax', 'argmin'
 	]);
 
 	const recurseTree = (node: AXNodeTree | undefined): string => {
@@ -652,10 +666,10 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 				if (opNames.has(text)) {
 					return `\\${text}`;
-				} else if (text.length > 1) {
+				} else if (/^[a-zA-Z]+$/.test(text) && text.length > 1) {
 					return `\\operatorname{${text}}`;
-				} else if (text === '#') {
-					return '\\#';
+				} else if (['_', '%', '&','#'].includes(text)) {
+					return `\\${text}`;
 				} else {
 					return text;
 				}
@@ -712,11 +726,11 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				};
 				let texCmd = accentMap[cmd];
 				if (texCmd) {
-					if (texCmd === 'hat' && base.length > 1) {
+					if (texCmd === 'hat' && cpLength(base) > 1) {
 						texCmd = 'widehat';
-					} else if (texCmd === 'check' && base.length > 1) {
+					} else if (texCmd === 'check' && cpLength(base) > 1) {
 						texCmd = 'widecheck';
-					} else if (texCmd === 'tilde' && base.length > 1) {
+					} else if (texCmd === 'tilde' && cpLength(base) > 1) {
 						texCmd = 'widetilde';
 					}
 					return `\\${texCmd}{${base}}`;
