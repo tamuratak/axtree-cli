@@ -754,7 +754,6 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 			case 'MathMLUnderOver':
 			case 'MathMLSubSup': {
-				// Handles nodes with both subscript and superscript (e.g. limits on \int)
 				const base = recurseTree(node.children[0]);
 				const sub = recurseTree(node.children[1]);
 				const sup = recurseTree(node.children[2]);
@@ -762,14 +761,12 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			}
 
 			case 'MathMLFraction': {
-				// numerator then denominator
 				const num = recurseTree(node.children[0]);
 				const den = recurseTree(node.children[1]);
 				return `\\frac{${num}}{${den}}`;
 			}
 
 			case 'MathMLSquareRoot': {
-				// children form the radicand
 				return `\\sqrt{${concatChildren(node)}}`;
 			}
 
@@ -820,8 +817,9 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			}
 
 			case 'MathMLMath':
-			default:
+			default: {
 				return concatChildren(node);
+			}
 		}
 	}
 
