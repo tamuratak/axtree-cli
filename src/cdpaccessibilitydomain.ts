@@ -639,7 +639,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 	const opNames = new Set([
 		'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh',
-		'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'argmax', 'argmin'
+		'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'arg', 'argmax', 'argmin'
 	]);
 
 	const recurseTree = (node: AXNodeTree | undefined): string => {
@@ -657,7 +657,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 				if (opNames.has(text)) {
 					return `\\${text}`;
-				} else if (text.length > 1) {
+				} else if (/^[a-zA-Z]+$/.test(text) && text.length > 1) {
 					return `\\operatorname{${text}}`;
 				} else if (['_', '%', '&','#'].includes(text)) {
 					return `\\${text}`;
