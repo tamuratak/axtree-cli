@@ -539,7 +539,12 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		if (text === '') {
 			return text;
 		}
-		text = text.normalize('NFKC');
+		const normalized = text.normalize('NFKC');
+		if (/^[\u{1D434}-\u{1D467}]+$/gu.test(text)) {
+			text = normalized;
+		} else if (!/^[a-zA-Z]+$/.test(normalized)) {
+			text = normalized;
+		}
 		text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
 			.replace(/[\u{2061}\u{2062}\u{2063}\u{2064}]/gu, '')
 			// remove the follwoing
