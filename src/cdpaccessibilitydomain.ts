@@ -532,6 +532,7 @@ function collectLinks(node: AXNodeTree, links: string[]): void {
 	}
 }
 
+//#region MathML to LaTeX Conversion
 const latexOpNames = new Set([
 	'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh',
 	'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'arg', 'argmax', 'argmin'
@@ -826,4 +827,4 @@ function renderLatexMatrix(child1: AXNodeTree, env: string): string {
 	}
 	return `\\begin{${env}}\n${rows.join(' \\\\\n')}\n\\end{${env}}`;
 };
-
+//#endregion MathML to LaTeX Conversion
