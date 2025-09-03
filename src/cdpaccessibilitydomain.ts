@@ -575,12 +575,16 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return out.join('')
 	}
 
+	const mLength = (text: string): number => {
+		return [...text].length;
+	}
+
 	const combineBaseSubSup = (base: string, sub: string | undefined = '', sup: string | undefined = ''): string => {
-		if (base.length !== 1 && !/^\\[a-zA-Z]+$/.test(base)) {
+		if (mLength(base) !== 1 && !/^\\[a-zA-Z]+$/.test(base)) {
 			base = `{${base}}`;
 		}
 		if (sub) {
-			if (sub.length === 1) {
+			if (mLength(sub) === 1) {
 				sub = `_${sub}`;
 			} else {
 				sub = `_{${sub}}`;
@@ -588,7 +592,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 
 		}
 		if (sup) {
-			if (sup.length === 1) {
+			if (mLength(sup) === 1) {
 				sup = `^${sup}`;
 			} else {
 				sup = `^{${sup}}`;
@@ -616,7 +620,7 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			return { op, cl, env: 'Bmatrix', isMatrix: true };
 		} else if (op === '{' && cl === '') {
 			return { op, cl, env: 'cases', isMatrix: true };
-		} else if (op.length === 1 && cl.length === 1) {
+		} else if (mLength(op) === 1 && mLength(cl) === 1) {
 			return { op, cl, env: 'matrix', isMatrix: true };
 		} else {
 			return { op, cl, env: 'align*', isMatrix: false };
@@ -717,11 +721,11 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				};
 				let texCmd = accentMap[cmd];
 				if (texCmd) {
-					if (texCmd === 'hat' && base.length > 1) {
+					if (texCmd === 'hat' && mLength(base) > 1) {
 						texCmd = 'widehat';
-					} else if (texCmd === 'check' && base.length > 1) {
+					} else if (texCmd === 'check' && mLength(base) > 1) {
 						texCmd = 'widecheck';
-					} else if (texCmd === 'tilde' && base.length > 1) {
+					} else if (texCmd === 'tilde' && mLength(base) > 1) {
 						texCmd = 'widetilde';
 					}
 					return `\\${texCmd}{${base}}`;
