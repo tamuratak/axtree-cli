@@ -549,11 +549,11 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		}
 		text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
 			.replace(/[\u{2061}\u{2062}\u{2063}\u{2064}]/gu, '')
-			// remove the follwoing
-			// - invisible function application symbol
-			// - invisible times
-			// - invisible separator
-			// - invisible plus
+		// remove the follwoing
+		// - invisible function application symbol
+		// - invisible times
+		// - invisible separator
+		// - invisible plus
 		return text;
 	}
 
@@ -651,6 +651,38 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		'log', 'ln', 'exp', 'max', 'min', 'lim', 'limsup', 'liminf', 'sup', 'inf', 'det', 'dim', 'arg', 'argmax', 'argmin'
 	]);
 
+	const accentMap: Record<string, string> = {
+		'\u{af}': 'bar',
+		'\u{a8}': 'ddot',
+		'\u{20db}': 'dddot',
+		'^': 'hat',
+		'~': 'tilde',
+		'\u{2015}': 'overline',
+		'`': 'grave',
+		'\u{b4}': 'acute',
+		'\u{2192}': 'vec', // right arrow
+		'\u{2c6}': 'hat',
+		'\u{2c7}': 'check',
+		'\u{2c9}': 'bar',
+		'\u{2ca}': 'acute',
+		'\u{2cb}': 'grave',
+		'\u{2d8}': 'breve',
+		'\u{2d9}': 'dot',
+		'\u{2da}': 'ring',
+		'\u{2dc}': 'tilde',
+		'\u{300}': 'grave',
+		'\u{301}': 'acute',
+		'\u{302}': 'hat',
+		'\u{303}': 'tilde',
+		'\u{304}': 'bar',
+		'\u{305}': 'bar',
+		'\u{306}': 'breve',
+		'\u{307}': 'dot',
+		'\u{308}': 'ddot',
+		'\u{30a}': 'ring',
+		'\u{30c}': 'check'
+	};
+
 	const recurseTree = (node: AXNodeTree | undefined): string => {
 		if (!node || visited.has(node.node.nodeId)) {
 			return '';
@@ -663,12 +695,11 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 			case 'MathMLIdentifier': {
 				let text = node.children.length > 0 ? concatChildren(node) : getTextFromNode(node);
 				text = text.trim();
-
 				if (opNames.has(text)) {
 					return `\\${text}`;
 				} else if (/^[a-zA-Z]+$/.test(text) && text.length > 1) {
 					return `\\operatorname{${text}}`;
-				} else if (['_', '%', '&','#'].includes(text)) {
+				} else if (['_', '%', '&', '#'].includes(text)) {
 					return `\\${text}`;
 				} else {
 					return text;
@@ -693,37 +724,6 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 				const base = recurseTree(node.children[0]);
 				let cmd = recurseTree(node.children[1]);
 				cmd = cmd.trim();
-				const accentMap: Record<string, string> = {
-					'\u{af}': 'bar',
-					'\u{a8}': 'ddot',
-					'\u{20db}': 'dddot',
-					'^': 'hat',
-					'~': 'tilde',
-					'\u{2015}': 'overline',
-					'`': 'grave',
-					'\u{b4}': 'acute',
-					'\u{2192}': 'vec', // right arrow
-					'\u{2c6}': 'hat',
-					'\u{2c7}': 'check',
-					'\u{2c9}': 'bar',
-					'\u{2ca}': 'acute',
-					'\u{2cb}': 'grave',
-					'\u{2d8}': 'breve',
-					'\u{2d9}': 'dot',
-					'\u{2da}': 'ring',
-					'\u{2dc}': 'tilde',
-					'\u{300}': 'grave',
-					'\u{301}': 'acute',
-					'\u{302}': 'hat',
-					'\u{303}': 'tilde',
-					'\u{304}': 'bar',
-					'\u{305}': 'bar',
-					'\u{306}': 'breve',
-					'\u{307}': 'dot',
-					'\u{308}': 'ddot',
-					'\u{30a}': 'ring',
-					'\u{30c}': 'check'
-				};
 				let texCmd = accentMap[cmd];
 				if (texCmd) {
 					if (texCmd === 'hat' && cpLength(base) > 1) {
