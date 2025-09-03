@@ -541,8 +541,10 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		}
 		const normalized = text.normalize('NFKC');
 		if (/^[\u{1D434}-\u{1D467}]+$/gu.test(text)) {
+			// Convert Mathematical Italic letters to ASCIIs
 			text = normalized;
 		} else if (!/^[a-zA-Z]+$/.test(normalized)) {
+			// Normalize mathematical symobols
 			text = normalized;
 		}
 		text = text.replace(/\u{2212}/gu, '-') // minus sign → ASCII hyphen
@@ -575,6 +577,9 @@ function convertMathMLNodeToLatex(root: AXNodeTree): string {
 		return out.join('')
 	}
 
+	/**
+	 * Get the length of a string in terms of Unicode code points
+	 */
 	const cpLength = (text: string): number => {
 		return [...text].length;
 	}
