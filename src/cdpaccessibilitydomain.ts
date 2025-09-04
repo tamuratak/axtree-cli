@@ -239,8 +239,8 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			// Convert MathML-like AXNode subtree into a LaTeX-like inline string
 			const mathStr = convertMathMLNodeToLatex(node);
 			if (mathStr) {
-				const lastBuffer = buffer.length > 0 ? buffer[buffer.length - 1] : undefined;
-				if (lastBuffer?.endsWith('\n\n')) {
+				const lastBuffer = buffer.slice(-3).join('');
+				if (lastBuffer.endsWith('\n\n')) {
 					// If we are at the start of a new paragraph, use display math
 					buffer.push(`$$\n${mathStr}\n$$`);
 				} else if (mathStr.startsWith('\\begin')) {
@@ -698,7 +698,7 @@ function recurseMathMLTree(node: AXNodeTree | undefined): string {
 					i += 2;
 				} else {
 					const childText = recurseMathMLTree(child);
-					const lastText = out.length > 0 ? out[out.length - 1] : undefined;
+					const lastText = out.slice(-1)[0];
 					if (lastText?.match(/^\\[a-zA-Z]+$/) && childText.match(/^[a-zA-Z]/)) {
 						out.push(' '); // add space to separate operator from identifier
 					}
@@ -748,7 +748,7 @@ function concatMatMLChildren(n: AXNodeTree): string {
 	const out: string[] = [];
 	for (const child of n.children) {
 		const childText = recurseMathMLTree(child);
-		const lastText = out.length > 0 ? out[out.length - 1] : undefined;
+		const lastText = out.slice(-1)[0];
 		if (lastText?.match(/^\\[a-zA-Z]+$/) && childText.match(/^[a-zA-Z]/)) {
 			out.push(' '); // add space to separate operator from identifier
 		}
