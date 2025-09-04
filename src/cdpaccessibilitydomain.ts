@@ -239,7 +239,7 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			// Convert MathML-like AXNode subtree into a LaTeX-like inline string
 			const mathStr = convertMathMLNodeToLatex(node);
 			if (mathStr) {
-				const lastBuffer = buffer.slice(-3).join('');
+				const lastBuffer = buffer.slice(-2).join('');
 				if (lastBuffer.endsWith('\n\n')) {
 					// If we are at the start of a new paragraph, use display math
 					buffer.push(`$$\n${mathStr}\n$$`);
