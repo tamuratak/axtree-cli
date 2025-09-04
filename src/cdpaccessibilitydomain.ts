@@ -792,7 +792,7 @@ function combineBaseSubSup(base: string, sub: string | undefined = '', sup: stri
 function extractMatrixLikeEnv(child: AXNodeTree, child1: AXNodeTree | undefined, child2: AXNodeTree | undefined) {
 	const result = child.node.role?.value === 'MathMLOperator' && child1?.node.role?.value === 'MathMLTable' && child2?.node.role?.value === 'MathMLOperator';
 	if (!result) {
-		return false;
+		return undefined;
 	}
 	const op = recurseMathMLTree(child);
 	const cl = recurseMathMLTree(child2);
