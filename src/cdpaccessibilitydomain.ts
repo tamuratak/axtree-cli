@@ -247,7 +247,7 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 					buffer.push(`\n$$\n${mathStr}\n$$`);
 				} else {
 					// Otherwise, use inline math
-					if (lastBuffer && !lastBuffer.endsWith(' ')) {
+					if (!lastBuffer.endsWith(' ')) {
 						buffer.push(' ');
 					}
 					buffer.push(`$${mathStr}$`);
