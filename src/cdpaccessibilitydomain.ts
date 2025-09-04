@@ -244,7 +244,8 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 					// If we are at the start of a new paragraph, use display math
 					buffer.push(`$$\n${mathStr}\n$$`);
 				} else if (mathStr.startsWith('\\begin')) {
-					buffer.push(`\n$$\n${mathStr}\n$$`);
+					buffer.push('\n');
+					buffer.push(`$$\n${mathStr}\n$$`);
 				} else {
 					// Otherwise, use inline math
 					if (!lastBuffer.endsWith(' ')) {
