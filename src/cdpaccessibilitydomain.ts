@@ -449,15 +449,17 @@ export function processTableNode(node: AXNodeTree, buffer: string[]): void {
 	}
 
 	if (rows.length > 0) {
-		const isHeader = (c: AXNodeTree) => {
+		let headerRowIndex = rows.findIndex(r => r.children.some((c) => {
 			const rr = getNodeRole(c.node);
-			return rr === 'columnheader' || rr === 'rowheader' || rr === 'cell';
-		}
-		let headerRowIndex = rows.findIndex(r => r.children.some(isHeader));
+			return rr === 'columnheader'
+		}));
 		if (headerRowIndex === -1) {
 			headerRowIndex = 0;
 		}
-		const headerCells = rows[headerRowIndex].children.filter(isHeader);
+		const headerCells = rows[headerRowIndex].children.filter((c) => {
+			const rr = getNodeRole(c.node);
+			return rr === 'columnheader' || rr === 'rowheader' || rr === 'cell';
+		});
 
 		// Generate header row
 		const headerContent = headerCells.map(cell => getNodeText(cell.node, false) || ' ');
