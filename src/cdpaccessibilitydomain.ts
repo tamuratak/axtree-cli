@@ -188,30 +188,30 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 	const role = getNodeRole(node.node);
 
 	switch (role) {
-		case 'navigation':
+		case 'navigation': {
 			return; // Skip navigation nodes
-
-		case 'heading':
+		}
+		case 'heading': {
 			processHeadingNode(uri, node, buffer, depth);
 			return;
-
-		case 'paragraph':
+		}
+		case 'paragraph': {
 			processParagraphNode(uri, node, buffer, depth, allowWrap);
 			return;
-
-		case 'list':
+		}
+		case 'list': {
 			buffer.push('\n');
 			for (const descChild of node.children) {
 				processNode(uri, descChild, buffer, depth + 1, true);
 			}
 			buffer.push('\n');
 			return;
-
-		case 'ListMarker':
+		}
+		case 'ListMarker': {
 			// TODO: Should we normalize these ListMarkers to `-` and normal lists?
 			buffer.push(getNodeText(node.node, allowWrap));
 			return;
-
+		}
 		case 'listitem': {
 			const tempBuffer: string[] = [];
 			// Process the children of the list item
@@ -222,8 +222,7 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			buffer.push(`${indent}${tempBuffer.join('').trim()}\n`);
 			return;
 		}
-
-		case 'link':
+		case 'link': {
 			if (!isNavigationLink(node)) {
 				const linkText = getNodeText(node.node, allowWrap);
 				const url = getLinkUrl(node.node);
@@ -234,7 +233,7 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 				}
 			}
 			return;
-
+		}
 		case 'MathMLMath': {
 			// Convert MathML-like AXNode subtree into a LaTeX-like inline string
 			const mathStr = convertMathMLNodeToLatex(node);
@@ -264,6 +263,14 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			}
 			break;
 		}
+		case 'figure': {
+			buffer.push('\n<figure>\n');
+			for (const child of node.children) {
+				processNode(uri, child, buffer, depth + 1, allowWrap);
+			}
+			buffer.push('\n</figure>\n');
+			return;
+		}
 		case 'image': {
 			const altText = getNodeText(node.node, allowWrap) || 'Image';
 			const imageUrl = getImageUrl(node.node);
@@ -274,32 +281,31 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			}
 			break;
 		}
-
-		case 'DescriptionList':
+		case 'DescriptionList': {
 			processDescriptionListNode(uri, node, buffer, depth);
 			return;
-
-		case 'blockquote':
+		}
+		case 'blockquote': {
 			buffer.push('> ' + getNodeText(node.node, allowWrap).replace(/\n/g, '\n> ') + '\n\n');
 			break;
-
+		}
 		// TODO: Is this the correct way to handle the generic role?
-		case 'generic':
+		case 'generic': {
 			buffer.push(' ');
 			break;
-
+		}
 		case 'code': {
 			processCodeNode(uri, node, buffer, depth);
 			return;
 		}
-
-		case 'pre':
+		case 'pre': {
 			buffer.push('```\n' + getNodeText(node.node, false) + '\n```\n\n');
 			break;
-
-		case 'table':
+		}
+		case 'table': {
 			processTableNode(node, buffer);
 			return;
+		}
 		default:
 			break;
 	}
