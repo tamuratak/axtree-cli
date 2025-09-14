@@ -263,12 +263,30 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			}
 			break;
 		}
+		case 'group': {
+			const label = node.node.name?.sources?.find(s => s.attribute === 'aria-label')?.value?.value;
+			if (label === 'media') {
+				buffer.push('\n<media>\n');
+				concatNodeChildren(uri, node, buffer, depth, allowWrap);
+				buffer.push('\n</media>\n');
+				return;
+			}
+			break;
+		}
 		case 'figure': {
 			buffer.push('\n<figure>\n');
-			for (const child of node.children) {
-				processNode(uri, child, buffer, depth + 1, allowWrap);
-			}
+			concatNodeChildren(uri, node, buffer, depth, allowWrap);
 			buffer.push('\n</figure>\n');
+			return;
+		}
+		case 'complementary': {
+			const tempBuffer: string[] = [];
+			concatNodeChildren(uri, node, tempBuffer, 5, allowWrap);
+			if (tempBuffer.length > 0) {
+				buffer.push('\n<aside>\n');
+				buffer.push(...tempBuffer);
+				buffer.push('\n</aside>\n');
+			}
 			return;
 		}
 		case 'image': {
@@ -311,6 +329,10 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 	}
 
 	// Process children if not already handled in specific cases
+	concatNodeChildren(uri, node, buffer, depth, allowWrap);
+}
+
+function concatNodeChildren(uri: URI, node: AXNodeTree, buffer: string[], depth: number, allowWrap: boolean) {
 	for (const child of node.children) {
 		processNode(uri, child, buffer, depth + 1, allowWrap);
 	}
