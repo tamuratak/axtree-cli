@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import { extractTime, ExtractedTime } from '../src/utils/extract.js';
 import { extractTitle } from '../src/utils/extract.js'
+import { removeHtmlElements } from '../src/utils/tweak.js'
 
 suite('Utils Tests', () => {
 
@@ -54,6 +55,22 @@ suite('Utils Tests', () => {
 		const res = extractTime('Date: Sept 5, 2019')
 		const expected: ExtractedTime = { year: 2019, month: 9, day: 5 }
 		assert.deepStrictEqual(res, expected)
+	})
+
+	test('removeHtmlElements removes multi-line figure block', () => {
+		const src = 'Intro\n<figure class="img">\n<img src="a.jpg">\n</figure>\nAfter'
+		const out = removeHtmlElements(src)
+		assert.strictEqual(out.includes('<figure'), false)
+		assert.strictEqual(out.includes('After'), true)
+	})
+
+	test('removeHtmlElements removes self-closing aside and collapses blank lines', () => {
+		const src = 'Start\n<aside class="ad" />\n\n\nEnd'
+		const out = removeHtmlElements(src)
+		// should not contain aside tag and blank lines reduced
+		assert.strictEqual(out.includes('<aside'), false)
+		const blankLines = (out.match(/\n\n/g) || []).length
+		assert.ok(blankLines <= 1)
 	})
 
 })
