@@ -98,7 +98,7 @@ export function extractSuffix(text: string): string {
     } else if (text.includes('The New York Times Company')) {
         return 'nytimes'
     } else {
-        throw new Error('Unknown source for suffix extraction')
+        return 'unknown'
     }
 }
 
