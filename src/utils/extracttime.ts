@@ -71,3 +71,13 @@ export function mkExtractedTimeDir(parentDir: string, time: ExtractedTime, suffi
     fs.mkdirSync(dirPath)
     return dirPath
 }
+
+export function extractSuffix(text: string): string {
+    if (text.includes('Dow Jones & Company, Inc. All Rights Reserved')) {
+        return 'wsj'
+    } else if (text.includes('The New York Times Company')) {
+        return 'nytimes'
+    } else {
+        throw new Error('Unknown source for suffix extraction')
+    }
+}
