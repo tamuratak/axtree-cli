@@ -1,3 +1,5 @@
+import * as fs from 'fs'
+import * as path from 'path'
 
 export interface ExtractedTime {
     year: number
@@ -50,4 +52,19 @@ export function extractTime(text: string): ExtractedTime | undefined {
     }
 
     return { year, month, day }
+}
+
+export function mkExtractedTimeDir(parentDir: string, time: ExtractedTime, suffix: string): string {
+    if (!path.isAbsolute(parentDir)) {
+        throw new TypeError('parentDir must be an absolute path')
+    }
+    // format YYMMDD
+    const yy = String(time.year % 100).padStart(2, '0')
+    const mm = String(time.month).padStart(2, '0')
+    const dd = String(time.day).padStart(2, '0')
+    const name = `${yy}${mm}${dd}${suffix}`
+
+    const dirPath = path.join(parentDir, name)
+    fs.mkdirSync(dirPath)
+    return dirPath
 }
