@@ -8,6 +8,7 @@ import { URI } from 'vscode-uri'
 import { inspectReadable } from './utils/inspect'
 import { trimOptionalProperties } from './utils/ax.js'
 import { extractSuffix, extractTime, extractTitle, generateExtractedTimeDirPath } from './utils/extract.js'
+import { removeHtmlElements } from './utils/tweak.js'
 
 
 interface CliArgs {
@@ -112,7 +113,8 @@ async function main(argv: string[]) {
                 const outPath = path.join(extDir, title + '.md')
                 const outPathJa = path.join(extDir, title + '_ja.md')
                 fs.writeFileSync(outPath, md)
-                fs.writeFileSync(outPathJa, md)
+                const mdJa = removeHtmlElements(md)
+                fs.writeFileSync(outPathJa, mdJa)
                 console.log(`Wrote to ${outPath} and ${outPathJa}`)
             } else {
                 console.log(md)
