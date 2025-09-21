@@ -65,6 +65,9 @@ export function mkExtractedTimeDir(parentDir: string, time: ExtractedTime, suffi
     const name = `${yy}${mm}${dd}${suffix}`
 
     const dirPath = path.join(parentDir, name)
+    if (fs.existsSync(dirPath)) {
+        return dirPath
+    }
     fs.mkdirSync(dirPath)
     return dirPath
 }
