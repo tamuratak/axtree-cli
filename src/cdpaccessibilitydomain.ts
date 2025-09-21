@@ -208,7 +208,7 @@ function extractMainContent(uri: URI, tree: AXNodeTree): string {
 
 function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number, allowWrap: boolean): void {
 	const role = getNodeRole(node.node);
-
+//console.log(JSON.stringify(node.node.role));
 	switch (role) {
 		case 'navigation': {
 			return; // Skip navigation nodes
@@ -299,6 +299,13 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			buffer.push('\n<figure>\n');
 			concatNodeChildren(uri, node, buffer, depth, allowWrap);
 			buffer.push('\n</figure>\n');
+			return;
+		}
+		case 'Figcaption': {
+			console.log('caption');
+			buffer.push('\n<figcaption>\n');
+			concatNodeChildren(uri, node, buffer, depth, allowWrap);
+			buffer.push('\n</figcaption>\n');
 			return;
 		}
 		case 'complementary': {
