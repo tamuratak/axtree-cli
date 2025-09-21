@@ -7,7 +7,7 @@ import { AXNode, convertAXTreeToMarkdown } from './cdpaccessibilitydomain.js'
 import { URI } from 'vscode-uri'
 import { inspectReadable } from './utils/inspect'
 import { trimOptionalProperties } from './utils/ax.js'
-import { extractSuffix, extractTime, extractTitle, generateExtractedTimeDirPath } from './utils/extract.js'
+import { extractDirSuffix, extractTime, extractTitle, generateExtractedTimeDirPath } from './utils/extract.js'
 import { removeHtmlElements } from './utils/tweak.js'
 
 
@@ -103,7 +103,7 @@ async function main(argv: string[]) {
                 if (!extractedTime) {
                     throw new Error('Failed to extract date from the page content')
                 }
-                const suffix = extractSuffix(md)
+                const suffix = extractDirSuffix(md)
                 const outDir = result.outDir
                 const title = extractTitle(md) || 'untitled'
                 const extDir = generateExtractedTimeDirPath(outDir, extractedTime, suffix)

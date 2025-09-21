@@ -92,7 +92,7 @@ export function generateExtractedTimeDirPath(parentDir: string, time: ExtractedT
     return dirPath
 }
 
-export function extractSuffix(text: string): string {
+export function extractDirSuffix(text: string): string {
     if (text.includes('Dow Jones & Company, Inc. All Rights Reserved')) {
         return 'wsj'
     } else if (text.includes('The New York Times Company')) {
