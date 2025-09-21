@@ -7,7 +7,7 @@ import { inspectReadable } from './utils/inspect'
 import { trimOptionalProperties } from './utils/ax.js'
 
 interface CliArgs {
-    out?: string
+    outDir?: string
     raw?: boolean
     waitForMs: number
     waitForSelector?: string
@@ -67,6 +67,10 @@ async function main(argv: string[]) {
             case '--timeout': {
                 const n = it.next(); if (n.done) { console.error('--timeout requires a number'); process.exit(2) }
                 result.timeoutMs = Number(n.value); break
+            }
+            case '--output-dir':{
+                const n = it.next(); if (n.done) { console.error('--output-dir requires a path'); process.exit(2) }
+                result.outDir = n.value; break
             }
             default:
                 console.error('Unknown arg', v)
