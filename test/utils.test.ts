@@ -44,4 +44,16 @@ suite('Utils Tests', () => {
 		assert.strictEqual(res, undefined)
 	})
 
+	test('extractTime accepts abbreviated month with dot', () => {
+		const res = extractTime('Published on Aug. 10, 2020')
+		const expected: ExtractedTime = { year: 2020, month: 8, day: 10 }
+		assert.deepStrictEqual(res, expected)
+	})
+
+	test('extractTime accepts abbreviated month without dot (Sept)', () => {
+		const res = extractTime('Date: Sept 5, 2019')
+		const expected: ExtractedTime = { year: 2019, month: 9, day: 5 }
+		assert.deepStrictEqual(res, expected)
+	})
+
 })

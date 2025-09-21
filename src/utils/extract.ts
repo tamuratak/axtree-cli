@@ -7,23 +7,49 @@ export interface ExtractedTime {
 }
 
 const monthNames: Record<string, number> = {
-    January: 1,
-    February: 2,
-    March: 3,
-    April: 4,
-    May: 5,
-    June: 6,
-    July: 7,
-    August: 8,
-    September: 9,
-    October: 10,
-    November: 11,
-    December: 12,
+    'January': 1,
+    'Jan': 1,
+    'Jan.': 1,
+    'February': 2,
+    'Feb': 2,
+    'Feb.': 2,
+    'March': 3,
+    'Mar': 3,
+    'Mar.': 3,
+    'April': 4,
+    'Apr': 4,
+    'Apr.': 4,
+    'May': 5,
+    'May.': 5,
+    'June': 6,
+    'Jun': 6,
+    'Jun.': 6,
+    'July': 7,
+    'Jul': 7,
+    'Jul.': 7,
+    'August': 8,
+    'Aug': 8,
+    'Aug.': 8,
+    'September': 9,
+    'Sept': 9,
+    'Sep': 9,
+    'Sept.': 9,
+    'Sep.': 9,
+    'October': 10,
+    'Oct': 10,
+    'Oct.': 10,
+    'November': 11,
+    'Nov': 11,
+    'Nov.': 11,
+    'December': 12,
+    'Dec': 12,
+    'Dec.': 12,
 }
 
 export function extractTime(text: string): ExtractedTime | undefined {
     // Match e.g. "January 2, 2020" or "January 02,2020" (allow optional space after comma)
-    const re = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s*(\d{4})/
+    // Accept full month names and common abbreviations (with optional trailing period)
+    const re = /((?:January|Jan\.?|February|Feb\.?|March|Mar\.?|April|Apr\.?|May\.?|June|Jun\.?|July|Jul\.?|August|Aug\.?|September|Sept\.?|Sep\.?|October|Oct\.?|November|Nov\.?|December|Dec\.?))\s+(\d{1,2}),\s*(\d{4})/
     const match = text.match(re)
     if (!match) {
         return undefined
