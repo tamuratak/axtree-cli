@@ -1,5 +1,4 @@
-import * as fs from 'fs'
-import * as path from 'path'
+import * as path from 'node:path'
 
 export interface ExtractedTime {
     year: number
@@ -54,7 +53,7 @@ export function extractTime(text: string): ExtractedTime | undefined {
     return { year, month, day }
 }
 
-export function mkExtractedTimeDir(parentDir: string, time: ExtractedTime, suffix: string): string {
+export function generateExtractedTimeDirPath(parentDir: string, time: ExtractedTime, suffix: string): string {
     if (!path.isAbsolute(parentDir)) {
         throw new TypeError('parentDir must be an absolute path')
     }
@@ -63,12 +62,7 @@ export function mkExtractedTimeDir(parentDir: string, time: ExtractedTime, suffi
     const mm = String(time.month).padStart(2, '0')
     const dd = String(time.day).padStart(2, '0')
     const name = `${yy}${mm}${dd}${suffix}`
-
     const dirPath = path.join(parentDir, name)
-    if (fs.existsSync(dirPath)) {
-        return dirPath
-    }
-    fs.mkdirSync(dirPath)
     return dirPath
 }
 
@@ -80,4 +74,38 @@ export function extractSuffix(text: string): string {
     } else {
         throw new Error('Unknown source for suffix extraction')
     }
+}
+
+export function extractTitle(text: string): string | undefined {
+    // Find first-level markdown heading: a line that starts with '# ' (not '##')
+    const lines = text.split(/\r?\n/)
+    for (const line of lines) {
+        const m = line.match(/^#\s+(.*)$/)
+        if (m) {
+            let title = m[1].trim()
+            if (title.length === 0) {
+                return undefined
+            }
+
+            // Normalize: convert to lower-case, replace non-ascii letters with ascii equivalents if possible
+            // For simplicity, remove diacritics using Unicode normalization, then remove non-alphanum chars
+            title = title.normalize('NFKD').replace(/\p{Diacritic}/gu, '')
+
+            // Keep only letters and digits and spaces, then collapse spaces to single dash
+            title = title.replace(/[^\p{L}\p{N} ]+/gu, '')
+            title = title.trim().replace(/\s+/g, '')
+            title = title.toLowerCase()
+
+            // Truncate to max 15 characters
+            if (title.length > 15) {
+                title = title.slice(0, 15)
+            }
+
+            // Remove leading/trailing dashes
+            title = title.replace(/^-+|-+$/g, '')
+
+            return title.length > 0 ? title : undefined
+        }
+    }
+    return undefined
 }

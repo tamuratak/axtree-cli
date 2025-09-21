@@ -302,7 +302,6 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			return;
 		}
 		case 'Figcaption': {
-			console.log('caption');
 			buffer.push('\n<figcaption>\n');
 			concatNodeChildren(uri, node, buffer, depth, allowWrap);
 			buffer.push('\n</figcaption>\n');

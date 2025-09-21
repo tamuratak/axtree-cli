@@ -1,5 +1,6 @@
 import * as assert from 'assert';
-import { extractTime, ExtractedTime } from '../src/utils/extracttime.js';
+import { extractTime, ExtractedTime } from '../src/utils/extract.js';
+import { extractTitle } from '../src/utils/extract.js'
 
 suite('Utils Tests', () => {
 
@@ -22,6 +23,24 @@ suite('Utils Tests', () => {
 
 	test('returns undefined for invalid day', () => {
 		const res = extractTime('March 0, 2020')
+		assert.strictEqual(res, undefined)
+	})
+
+	test('extractTitle basic heading', () => {
+		const md = '# Hello World\n\nSome content'
+		const res = extractTitle(md)
+		assert.strictEqual(res, 'helloworld')
+	})
+
+	test('extractTitle truncates to 15 chars', () => {
+		const md = '# This is a Very Long Title Indeed\nmore'
+		const res = extractTitle(md)
+		assert.strictEqual(res && res.length <= 15, true)
+	})
+
+	test('extractTitle returns undefined when no heading', () => {
+		const md = 'No headings here\nJust text'
+		const res = extractTitle(md)
 		assert.strictEqual(res, undefined)
 	})
 

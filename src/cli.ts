@@ -1,10 +1,14 @@
 #!/usr/bin/env node
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { getFullAXTree } from './axtree'
 
 import { AXNode, convertAXTreeToMarkdown } from './cdpaccessibilitydomain.js'
 import { URI } from 'vscode-uri'
 import { inspectReadable } from './utils/inspect'
 import { trimOptionalProperties } from './utils/ax.js'
+import { extractSuffix, extractTime, extractTitle, generateExtractedTimeDirPath } from './utils/extract.js'
+
 
 interface CliArgs {
     outDir?: string
@@ -93,7 +97,26 @@ async function main(argv: string[]) {
             console.log(readable)
         } else {
             const md = convertAXTreeToMarkdown(URI.parse(result.target), ax.nodes as AXNode[])
-            console.log(md)
+            if (result.outDir) {
+                const extractedTime = extractTime(md)
+                if (!extractedTime) {
+                    throw new Error('Failed to extract date from the page content')
+                }
+                const suffix = extractSuffix(md)
+                const outDir = result.outDir
+                const title = extractTitle(md) || 'untitled'
+                const extDir = generateExtractedTimeDirPath(outDir, extractedTime, suffix)
+                if (!fs.existsSync(extDir)) {
+                    fs.mkdirSync(extDir)
+                }
+                const outPath = path.join(extDir, title + '.md')
+                const outPathJa = path.join(extDir, title + '_ja.md')
+                fs.writeFileSync(outPath, md)
+                fs.writeFileSync(outPathJa, md)
+                console.log(`Wrote to ${outPath} and ${outPathJa}`)
+            } else {
+                console.log(md)
+            }
         }
         process.exit(0)
     } catch (err) {
