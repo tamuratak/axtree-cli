@@ -13,7 +13,7 @@ export function removeHtmlElements(text: string): string {
 		const selfRe = new RegExp(`<${tag}\\b[^>]*\\/?>`, 'gi')
 		out = out.replace(selfRe, '')
 	}
-	const advertisementRe = /^Advertisement$/g
+	const advertisementRe = /^Advertisement$/gm
 	out = out.replace(advertisementRe, '')
 	// Collapse multiple blank lines into one
 	out = out.replace(/\n{3,}/g, '\n\n')
