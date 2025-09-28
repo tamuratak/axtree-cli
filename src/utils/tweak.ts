@@ -5,15 +5,16 @@ export function removeHtmlElements(text: string): string {
 	const tags = ['figure', 'figcaption', 'aside', 'media']
 	let out = text
 	for (const tag of tags) {
-	// remove pair tags: <tag ...>...</tag>
-	// use dotAll (s) so '.' matches newlines and simplify the pattern
-	const pairRe = new RegExp(`<${tag}\\b[^>]*>.*?<\\/${tag}>`, 'gis')
+		// remove pair tags: <tag ...>...</tag>
+		// use dotAll (s) so '.' matches newlines and simplify the pattern
+		const pairRe = new RegExp(`<${tag}\\b[^>]*>.*?<\\/${tag}>`, 'gis')
 		out = out.replace(pairRe, '')
 		// remove self-closing tags: <tag ... /> or <tag.../>
-	const selfRe = new RegExp(`<${tag}\\b[^>]*\\/?>`, 'gi')
+		const selfRe = new RegExp(`<${tag}\\b[^>]*\\/?>`, 'gi')
 		out = out.replace(selfRe, '')
 	}
-
+	const advertisementRe = /^Advertisement$/g
+	out = out.replace(advertisementRe, '')
 	// Collapse multiple blank lines into one
 	out = out.replace(/\n{3,}/g, '\n\n')
 	// Trim leading/trailing whitespace
