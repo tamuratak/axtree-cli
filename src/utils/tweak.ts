@@ -2,7 +2,7 @@
 export function removeHtmlElements(text: string): string {
 	// Remove block tags with their content (non-greedy), allow attributes and newlines
 	// Use case-insensitive matching for tags
-	const tags = ['figure', 'aside', 'media']
+	const tags = ['figure', 'figcaption', 'aside', 'media']
 	let out = text
 	for (const tag of tags) {
 	// remove pair tags: <tag ...>...</tag>
