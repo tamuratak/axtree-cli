@@ -58,7 +58,7 @@ export function extractTime(text: string): ExtractedTime | undefined {
     }
 
     let textToScan = ''
-    // If no line starting with '#' is found, return undefined
+    // If no line starting with '#' is found, textToScan is the entire text
     if (startIndex === 0 && !lines[0]?.startsWith('#')) {
         textToScan = text
     } else {
