@@ -56,19 +56,14 @@ export function extractTime(text: string): ExtractedTime | undefined {
             break
         }
     }
-
-    let textToScan = ''
-    // If no line starting with '#' is found, textToScan is the entire text
-    if (startIndex === 0 && !lines[0]?.startsWith('#')) {
-        textToScan = text
-    } else {
-        // Join lines from the first '#' line onwards for pattern matching
+    let textToScan: string | undefined
+    if (startIndex !== 0 || lines[0]?.startsWith('#')) {
         textToScan = lines.slice(startIndex).join('\n')
     }
     // Match e.g. "January 2, 2020" or "January 02,2020" (allow optional space after comma)
     // Accept full month names and common abbreviations (with optional trailing period)
     const re = /((?:January|Jan\.?|February|Feb\.?|March|Mar\.?|April|Apr\.?|May\.?|June|Jun\.?|July|Jul\.?|August|Aug\.?|September|Sept\.?|Sep\.?|October|Oct\.?|November|Nov\.?|December|Dec\.?))\s+(\d{1,2}),\s*(\d{4})/
-    const match = textToScan.match(re)
+    const match = textToScan?.match(re) || text.match(re)
     if (!match) {
         return undefined
     }
