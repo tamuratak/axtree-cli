@@ -22,7 +22,8 @@
         "start": "node dist/cli.js",
         "cli": "npm run build && node dist/cli.js",
         "test": "mocha --timeout 10000 --require source-map-support/register --ui tdd out/test/**/*.js",
-    "test:witsandbox": "sandbox-exec.js -c -- mocha --require source-map-support/register --ui tdd out/test/**/*.js",
+        "test:witsandbox": "sandbox-exec.js -c -- mocha --require source-map-support/register --ui tdd out/test/**/*.js",
+        "test:witsandbox:json": "sandbox-exec.js -c -- mocha --require source-map-support/register --reporter json --ui tdd out/test/unittest/**/*.js",
         "lint": "eslint --cache .",
         "lint:fix": "eslint --fix --cache .",
         "watch": "tsc -w -p ./"
