@@ -23,7 +23,7 @@ interface CliArgs {
 }
 
 function printUsage() {
-    console.log('Usage: axtree <url-or-path> [--raw] [--wait-for-ms N] [--wait-for-selector selector] [--timeout ms]')
+    console.log('Usage: axtree <url-or-path> [--output-dir <path>] [--raw] [--wait-for-ms N] [--wait-for-selector selector] [--timeout ms]')
 }
 
 async function main(argv: string[]) {
@@ -31,6 +31,10 @@ async function main(argv: string[]) {
     if (args.length === 0) {
         printUsage()
         process.exit(1)
+    }
+    if (args.includes('--help') || args.includes('-h')) {
+        printUsage()
+        process.exit(0)
     }
     const result: CliArgs = {
         raw: false,
@@ -73,7 +77,7 @@ async function main(argv: string[]) {
                 const n = it.next(); if (n.done) { console.error('--timeout requires a number'); process.exit(2) }
                 result.timeoutMs = Number(n.value); break
             }
-            case '--output-dir':{
+            case '--output-dir': {
                 const n = it.next(); if (n.done) { console.error('--output-dir requires a path'); process.exit(2) }
                 result.outDir = n.value; break
             }
